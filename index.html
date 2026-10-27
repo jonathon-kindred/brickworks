@@ -11,7 +11,7 @@
   img{max-width:100%}
   [hidden]{display:none!important}
 </style>
-<title>BricksWork</title>
+<title>Brickworks</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
@@ -49,7 +49,6 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.022em;font-size:16px}
 .logo .sq{width:17px;height:17px;border-radius:4px;background:var(--accent);position:relative;flex:none}
 .logo .sq::after{content:"";position:absolute;inset:4px 4px auto auto;width:5px;height:5px;border-radius:1.5px;background:var(--accent-ink);opacity:.85}
-.logo .dim{color:var(--fg-dim);font-weight:400}
 .topbar .sp{flex:1}
 .ghost{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-size:13px;font-weight:500;padding:7px 13px;border-radius:999px;cursor:pointer;transition:background .18s var(--spring),border-color .18s,transform .12s var(--spring)}
 .ghost:hover{background:var(--surface-2)}
@@ -156,6 +155,19 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .cta.sm{font-size:13px;padding:7px 15px}
 .note{font-size:11.5px;color:var(--fg-dim);padding:0 16px 13px;background:var(--surface)}
 
+
+/* Primary tabs: underline rail, not pills — pills are already doing work inside
+   the configurator and a second set would compete. */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{appearance:none;background:none;border:0;border-bottom:2px solid transparent;font:inherit;font-size:14.5px;font-weight:500;color:var(--fg-dim);padding:9px 15px 10px;cursor:pointer;white-space:nowrap;transition:color .2s,border-color .25s var(--spring)}
+.tabs button[aria-selected="true"]{color:var(--fg);font-weight:700;border-bottom-color:var(--accent)}
+.tabs button:hover{color:var(--fg)}
+.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tabnote{font-size:12.5px;color:var(--fg-dim);margin:-8px 0 18px;max-width:70ch;line-height:1.5}
+.callout{font-size:11.5px;line-height:1.5;color:var(--fg-dim);background:var(--surface-2);border-left:2px solid var(--warn);padding:9px 11px;border-radius:0 7px 7px 0;margin:11px 0 0}
+.callout b{color:var(--fg);font-weight:500}
+.ta{font-family:var(--font-mono);font-size:12px;min-height:62px;resize:vertical;line-height:1.5}
 .foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:11px;font-size:12.5px}
 .foot-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;color:var(--fg-dim)}
 .foot-row b{color:var(--fg);font-weight:500}
@@ -166,7 +178,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 </head>
 <body>
 <div class="topbar"><div class="topbar-in">
-  <div class="logo"><span class="sq"></span>Bricks<span class="dim">Work</span></div>
+  <div class="logo"><span class="sq"></span>Brickworks</div>
   <div class="sp"></div>
   <button class="ghost" id="theme" type="button">Theme</button>
   <button class="cta sm" id="download-top" type="button">Download repo</button>
@@ -174,14 +186,133 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 
 <div class="wrap">
   <div class="lede">
-    <h1>Terraform for Databricks workspaces, generated.</h1>
-    <p>Pick a cloud, set your naming convention, and get a complete repo — networking, workspace, Unity Catalog attachment and GitHub Actions with OIDC. No long-lived secrets.</p>
+    <h1>Databricks platform code, generated.</h1>
+    <p>Three repositories from one place: the workspace and its cloud components as Terraform, Unity Catalog structure as a bundle, and declarative pipelines as another. OIDC throughout, no long-lived secrets.</p>
   </div>
+
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" aria-selected="true" data-tab="platform">Platform</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="governance">Governance</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="pipelines">Pipelines</button>
+  </div>
+  <p class="tabnote" id="tabnote"></p>
 
   <div class="grid">
     <!-- ============ CONFIG RAIL ============ -->
     <div class="rail">
-      <div class="panel">
+      <div class="panel" id="rail-shared" hidden>
+        <div class="sec">
+          <h2>Naming</h2>
+          <div class="two">
+            <div class="field">
+              <label for="s-org">Organisation</label>
+              <input id="s-org" value="acme" spellcheck="false" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="s-proj">Workload</label>
+              <input id="s-proj" value="lakehouse" spellcheck="false" autocomplete="off">
+            </div>
+          </div>
+          <span class="hint">Shared with the Platform tab.</span>
+        </div>
+        <div class="sec">
+          <h2>Environments</h2>
+          <div class="chips" id="s-envs">
+            <button class="chip" type="button" aria-pressed="true" data-v="dev">dev</button>
+            <button class="chip" type="button" aria-pressed="true" data-v="test">test</button>
+            <button class="chip" type="button" aria-pressed="true" data-v="prod">prod</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------------- GOVERNANCE ---------------- -->
+      <div class="panel" id="rail-governance" hidden>
+        <div class="sec">
+          <h2>Domains</h2>
+          <div class="field">
+            <label for="g-domains">One catalog or schema per domain</label>
+            <textarea id="g-domains" class="ta" spellcheck="false">finance
+people
+operations</textarea>
+            <span class="hint">One per line. Lowercase, underscores allowed.</span>
+          </div>
+        </div>
+        <div class="sec">
+          <h2>Isolation</h2>
+          <div class="seg" id="seg-iso" style="--n:2;--i:0;grid-template-columns:repeat(2,1fr)" role="tablist">
+            <button type="button" role="tab" aria-selected="true" data-v="catalog">Catalog per env</button>
+            <button type="button" role="tab" aria-selected="false" data-v="schema">Schema per env</button>
+          </div>
+          <p class="hint" id="isohint" style="margin:9px 0 0;font-size:11.5px;color:var(--fg-dim)"></p>
+        </div>
+        <div class="sec">
+          <h2>Layers</h2>
+          <div class="chips" id="g-layers">
+            <button class="chip" type="button" aria-pressed="true" data-v="bronze">bronze</button>
+            <button class="chip" type="button" aria-pressed="true" data-v="silver">silver</button>
+            <button class="chip" type="button" aria-pressed="true" data-v="gold">gold</button>
+            <button class="chip" type="button" aria-pressed="false" data-v="sandbox">sandbox</button>
+          </div>
+        </div>
+        <div class="sec">
+          <h2>Identity</h2>
+          <div class="swrow">
+            <div class="txt"><b>Access groups per domain</b><span>Reader, writer and owner groups, with grants wired to them.</span></div>
+            <button class="sw" id="g-groups" role="switch" aria-checked="true" type="button" aria-label="Access groups"></button>
+          </div>
+          <div class="swrow">
+            <div class="txt"><b>Service principal per domain</b><span>One identity per domain for its pipelines to run as.</span></div>
+            <button class="sw" id="g-sp" role="switch" aria-checked="true" type="button" aria-label="Service principals"></button>
+          </div>
+          <div class="swrow">
+            <div class="txt"><b>Managed volumes</b><span>A landing volume per domain for file ingestion.</span></div>
+            <button class="sw" id="g-vol" role="switch" aria-checked="true" type="button" aria-label="Volumes"></button>
+          </div>
+          <p class="callout"><b>Bundles cannot create groups or service principals.</b> Those are account-level identity objects, so they are emitted as Terraform in <code>identity/</code> alongside the bundle rather than pretended into the YAML.</p>
+        </div>
+      </div>
+
+      <!-- ---------------- PIPELINES ---------------- -->
+      <div class="panel" id="rail-pipelines" hidden>
+        <div class="sec">
+          <h2>Pipelines</h2>
+          <div class="field">
+            <label for="p-names">One pipeline per line</label>
+            <textarea id="p-names" class="ta" spellcheck="false">orders
+customers</textarea>
+          </div>
+        </div>
+        <div class="sec">
+          <h2>Source</h2>
+          <div class="seg" id="seg-src" style="--n:3;--i:0;grid-template-columns:repeat(3,1fr)" role="tablist">
+            <button type="button" role="tab" aria-selected="true" data-v="files">Files</button>
+            <button type="button" role="tab" aria-selected="false" data-v="kafka">Kafka</button>
+            <button type="button" role="tab" aria-selected="false" data-v="table">Table</button>
+          </div>
+          <p class="hint" id="srchint" style="margin:9px 0 0;font-size:11.5px;color:var(--fg-dim)"></p>
+        </div>
+        <div class="sec">
+          <h2>Execution</h2>
+          <div class="seg" id="seg-trig" style="--n:2;--i:0;grid-template-columns:repeat(2,1fr)" role="tablist">
+            <button type="button" role="tab" aria-selected="true" data-v="triggered">Triggered</button>
+            <button type="button" role="tab" aria-selected="false" data-v="continuous">Continuous</button>
+          </div>
+          <div class="swrow" style="margin-top:11px">
+            <div class="txt"><b>Serverless</b><span>Default. Turn off only where the workload needs classic compute.</span></div>
+            <button class="sw" id="p-serverless" role="switch" aria-checked="true" type="button" aria-label="Serverless"></button>
+          </div>
+          <div class="swrow">
+            <div class="txt"><b>Expectations</b><span>Quality constraints on each silver table, dropping bad rows.</span></div>
+            <button class="sw" id="p-expect" role="switch" aria-checked="true" type="button" aria-label="Expectations"></button>
+          </div>
+          <div class="swrow">
+            <div class="txt"><b>Scheduling job</b><span>A job that runs the pipelines on a cron.</span></div>
+            <button class="sw" id="p-job" role="switch" aria-checked="true" type="button" aria-label="Scheduling job"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel pf">
         <div class="sec">
           <h2>Cloud</h2>
           <div class="seg" id="seg-cloud" style="--n:3;--i:0;grid-template-columns:repeat(3,1fr)" role="tablist">
@@ -201,7 +332,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel pf">
         <div class="sec">
           <h2>Naming convention</h2>
           <div class="field">
@@ -242,7 +373,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel pf">
         <div class="sec">
           <h2>Resolved names</h2>
           <div class="names" id="names"></div>
@@ -254,7 +385,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel pf">
         <div class="sec">
           <h2>Options</h2>
           <div class="swrow">
@@ -314,7 +445,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
       <button class="mini" id="sharecfg" type="button">Copy config link</button>
       <span class="dim">Sends a colleague this exact configuration.</span>
     </div>
-    <p class="dim small">BricksWork is an independent project. It is not affiliated with, endorsed by, or sponsored by Databricks, Inc. Generated code is a starting point: review it, run <code>terraform plan</code>, and check it against your own standards before applying.</p>
+    <p class="dim small">Brickworks is an independent project. It is not affiliated with, endorsed by, or sponsored by Databricks, Inc. Generated code is a starting point: review it, run <code>terraform plan</code>, and check it against your own standards before applying.</p>
   </footer>
 </div>
 
@@ -324,6 +455,11 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 var S={cloud:"aws",mode:"both",org:"acme",proj:"lakehouse",region:"",pattern:"{org}-{workload}-{env}-{res}",
        envs:["dev","test","prod"],pl:false,cmk:false,log:true,budget:true,drift:true};
 var FILES={},CUR="README.md";
+var TAB="platform";
+var G={domains:["finance","people","operations"],iso:"catalog",
+       layers:["bronze","silver","gold"],groups:true,sp:true,vol:true};
+var P={names:["orders","customers"],src:"files",trig:"triggered",
+       serverless:true,expect:true,job:true};
 
 var REGIONS={aws:["eu-west-2","eu-west-1","us-east-1","us-west-2","ap-southeast-2"],
              azure:["uksouth","westeurope","eastus","northeurope","australiaeast"],
@@ -367,7 +503,7 @@ function checks(){
 }
 
 /* ---------- file generation ---------- */
-function hdr(t){return "# "+t+"\n# Generated by BricksWork. Review before applying.\n\n";}
+function hdr(t){return "# "+t+"\n# Generated by Brickworks. Review before applying.\n\n";}
 
 function tfBlock(extra){
   var p=PROV[S.cloud],s='terraform {\n  required_version = ">= 1.9.0"\n  required_providers {\n'+
@@ -405,7 +541,7 @@ function seedScript(){
   if(S.cloud==="aws"){
     L.push("#!/usr/bin/env bash");
     L.push("#");
-    L.push("# BricksWork seed. Run this once, in AWS CloudShell.");
+    L.push("# Brickworks seed. Run this once, in AWS CloudShell.");
     L.push("#");
     L.push("# It creates the only things Terraform cannot create for itself: the GitHub");
     L.push("# OIDC trust, the roles CI assumes, and the bucket their state lives in.");
@@ -590,7 +726,7 @@ function seedScript(){
   } else if(S.cloud==="azure"){
     L.push("#!/usr/bin/env bash");
     L.push("#");
-    L.push("# BricksWork seed. Run this once, in Azure Cloud Shell (bash).");
+    L.push("# Brickworks seed. Run this once, in Azure Cloud Shell (bash).");
     L.push("#");
     L.push("# Creates the app registrations GitHub Actions federates into, the storage");
     L.push("# account holding Terraform state, and nothing else. Everything after this");
@@ -673,7 +809,7 @@ function seedScript(){
   } else {
     L.push("#!/usr/bin/env bash");
     L.push("#");
-    L.push("# BricksWork seed. Run this once, in Google Cloud Shell.");
+    L.push("# Brickworks seed. Run this once, in Google Cloud Shell.");
     L.push("#");
     L.push("#   export GITHUB_REPO=your-org/your-repo");
     L.push("#   export PROJECT_ID=your-project");
@@ -767,12 +903,12 @@ function seedReadme(){
   return r;
 }
 
-function build(){
+function buildPlatform(){
   var F={},e0=S.envs[0]||"dev",p=PROV[S.cloud],srv=(S.mode!=="classic"),cls=(S.mode!=="serverless");
 
   /* ---- README ---- */
   var r="# "+S.org+"-"+S.proj+" · Databricks on "+S.cloud.toUpperCase()+"\n\n";
-  r+="Generated by BricksWork. Terraform "+(S.cloud==="aws"?"AWS":S.cloud==="azure"?"Azure":"GCP")+
+  r+="Generated by Brickworks. Terraform "+(S.cloud==="aws"?"AWS":S.cloud==="azure"?"Azure":"GCP")+
      ", "+(S.mode==="both"?"classic and serverless":S.mode)+" compute, "+S.envs.length+" environment(s).\n\n";
   r+="## Apply order\n\n```\nbootstrap/seed.sh     run once by a human, in the cloud shell. Not Terraform.\nstacks/00-account/    regional, shared across workspaces\nstacks/10-workspace/  per workspace\nstacks/20-workspace-config/\n```\n\nEverything below the seed runs in GitHub Actions. No one needs cloud\ncredentials on a laptop.\n\n";
   r+="## GitHub configuration\n\nThis repo uses OIDC throughout. **There are no repository secrets.**\n\n### Repository variables\n\n| Variable | Value |\n|---|---|\n";
@@ -1004,6 +1140,244 @@ function build(){
   return F;
 }
 
+/* ===================== GOVERNANCE: Unity Catalog bundle ===================== */
+function listOf(id,fallback){
+  var el=document.getElementById(id);
+  var v=(el&&el.value||"").split("\n").map(function(s){
+    return s.trim().toLowerCase().replace(/[^a-z0-9_]/g,"_");}).filter(Boolean);
+  return v.length?v:fallback;
+}
+function buildGovernance(){
+  var F={},doms=G.domains,layers=G.layers,envs=S.envs,perCatalog=(G.iso==="catalog");
+  var bundleName=S.org+"-"+S.proj+"-governance";
+
+  function catName(d,env){return perCatalog?(S.org+"_"+d+"_"+env):(S.org+"_"+d);}
+
+  /* ---- databricks.yml ---- */
+  var y="# "+bundleName+"\n# Generated by Brickworks. Review before deploying.\n\n";
+  y+="bundle:\n  name: "+bundleName+"\n\ninclude:\n  - resources/*.yml\n\n";
+  y+="variables:\n  env:\n    description: Environment short name, used in catalog and schema names\n    default: dev\n";
+  y+="  storage_root:\n    description: External location URL backing managed storage for these catalogs\n    default: \"\"\n\n";
+  y+="targets:\n";
+  envs.forEach(function(en,i){
+    y+="  "+en+":\n";
+    if(i===0)y+="    default: true\n";
+    y+="    mode: "+(en==="prod"?"production":"development")+"\n";
+    y+="    variables:\n      env: "+en+"\n";
+    if(en==="prod")y+="    workspace:\n      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}\n";
+    y+="\n";
+  });
+  F["databricks.yml"]=y;
+
+  /* ---- one catalog file per domain ---- */
+  doms.forEach(function(d){
+    var r="# "+d+" — catalog, schemas and grants\n\nresources:\n  catalogs:\n    "+d+":\n";
+    r+="      name: "+(perCatalog?(S.org+"_"+d+"_${var.env}"):(S.org+"_"+d))+"\n";
+    r+="      comment: \""+d+" domain, managed by the governance bundle\"\n";
+    r+="      properties:\n        domain: "+d+"\n        managed_by: brickworks\n\n";
+    r+="      schemas:\n";
+    layers.forEach(function(l){
+      r+="        - name: "+(perCatalog?l:(l+"_${var.env}"))+"\n";
+      r+="          comment: \""+l+" layer for "+d+"\"\n";
+    });
+    if(G.groups){
+      r+="\n      grants:\n";
+      r+="        - principal: "+d+"_owner\n          privileges:\n            - ALL_PRIVILEGES\n";
+      r+="        - principal: "+d+"_writer\n          privileges:\n            - USE_CATALOG\n            - CREATE_SCHEMA\n";
+      r+="        - principal: "+d+"_reader\n          privileges:\n            - USE_CATALOG\n            - SELECT\n";
+      if(G.sp)r+="        - principal: sp-"+S.org+"-"+d+"-pipelines\n          privileges:\n            - USE_CATALOG\n            - CREATE_SCHEMA\n            - MODIFY\n";
+    }
+    F["resources/"+d+".catalog.yml"]=r;
+
+    if(G.vol){
+      var v="# "+d+" — landing volume for file ingestion\n\nresources:\n  volumes:\n    "+d+"_landing:\n";
+      v+="      catalog_name: "+(perCatalog?(S.org+"_"+d+"_${var.env}"):(S.org+"_"+d))+"\n";
+      v+="      schema_name: "+(perCatalog?layers[0]:(layers[0]+"_${var.env}"))+"\n";
+      v+="      name: landing\n      volume_type: MANAGED\n";
+      v+="      comment: \"Raw files landing here before the "+layers[0]+" tables\"\n";
+      if(G.groups){
+        v+="\n      # Volumes take grants, not permissions. Different shape from jobs and pipelines.\n";
+        v+="      grants:\n        - principal: "+d+"_writer\n          privileges:\n            - WRITE_VOLUME\n";
+        v+="        - principal: "+d+"_reader\n          privileges:\n            - READ_VOLUME\n";
+      }
+      F["resources/"+d+".volume.yml"]=v;
+    }
+  });
+
+  /* ---- identity, which bundles cannot express ---- */
+  if(G.groups||G.sp){
+    var t="# Identity for the governance bundle.\n";
+    t+="#\n# Bundles have no resource type for groups or service principals: they are\n# account-level identity objects, not workspace assets. So they live here, in\n# Terraform, and the bundle's grants reference them by name.\n#\n# Apply this BEFORE deploying the bundle, or the grants will fail on principals\n# that do not exist yet.\n\n";
+    t+="terraform {\n  required_version = \">= 1.9.0\"\n  required_providers {\n    databricks = {\n      source  = \"databricks/databricks\"\n      version = \"~> "+DBX.split(".").slice(0,2).join(".")+"\"\n    }\n  }\n}\n\n";
+    t+="provider \"databricks\" {\n  alias      = \"account\"\n  auth_type  = \""+authType()+"\"\n  host       = \""+(S.cloud==="azure"?"https://accounts.azuredatabricks.net":S.cloud==="gcp"?"https://accounts.gcp.databricks.com":"https://accounts.cloud.databricks.com")+"\"\n  account_id = var.databricks_account_id\n  client_id  = var.databricks_client_id\n}\n\n";
+    t+="locals {\n  domains = "+JSON.stringify(doms).replace(/"/g,'"')+"\n}\n\n";
+    if(G.groups){
+      ["reader","writer","owner"].forEach(function(role){
+        t+="resource \"databricks_group\" \""+role+"\" {\n  provider     = databricks.account\n  for_each     = toset(local.domains)\n  display_name = \"${each.key}_"+role+"\"\n}\n\n";
+      });
+    }
+    if(G.sp){
+      t+="resource \"databricks_service_principal\" \"pipelines\" {\n  provider     = databricks.account\n  for_each     = toset(local.domains)\n  display_name = \"sp-"+S.org+"-${each.key}-pipelines\"\n}\n\n";
+      t+="# The pipeline identity belongs to the domain's writer group, so grants are\n# expressed once against the group rather than twice.\n";
+      if(G.groups)t+="resource \"databricks_group_member\" \"sp_writer\" {\n  provider  = databricks.account\n  for_each  = toset(local.domains)\n  group_id  = databricks_group.writer[each.key].id\n  member_id = databricks_service_principal.pipelines[each.key].id\n}\n\n";
+    }
+    t+="resource \"databricks_mws_permission_assignment\" \"workspace\" {\n  provider     = databricks.account\n  for_each     = toset(local.domains)\n  workspace_id = var.workspace_id\n  principal_id = "+(G.groups?"databricks_group.reader[each.key].id":"databricks_service_principal.pipelines[each.key].id")+"\n  permissions  = [\"USER\"]\n}\n";
+    F["identity/main.tf"]=t;
+    F["identity/variables.tf"]="variable \"databricks_account_id\" {\n  type = string\n}\n\nvariable \"databricks_client_id\" {\n  type = string\n}\n\nvariable \"workspace_id\" {\n  type = string\n}\n";
+  }
+
+  /* ---- CI ---- */
+  F[".github/workflows/deploy.yml"]=
+"name: governance\n\non:\n  push:\n    branches: [main]\n  pull_request:\n\npermissions:\n  id-token: write\n  contents: read\n\nconcurrency:\n  group: governance-${{ github.ref }}\n  cancel-in-progress: false\n\njobs:\n"+
+envs.map(function(en,i){
+  return "  "+en+":\n    runs-on: ubuntu-latest\n    environment: "+en+"\n"+(i>0?"    needs: "+envs[i-1]+"\n":"")+
+  "    env:\n      DATABRICKS_AUTH_TYPE: "+authType()+"\n      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}\n      DATABRICKS_HOST: ${{ vars.DATABRICKS_WORKSPACE_URL }}\n"+
+  "    steps:\n      - uses: actions/checkout@v4\n\n      - uses: databricks/setup-cli@main\n\n      - name: Validate\n        run: databricks bundle validate --strict --target "+en+"\n\n"+
+  "      - name: Deploy\n        if: github.event_name == 'push'\n        run: databricks bundle deploy --target "+en+"\n";
+}).join("\n");
+
+  /* ---- README ---- */
+  var r="# "+bundleName+"\n\nUnity Catalog structure for "+doms.length+" domain(s) across "+envs.length+" environment(s), as a Declarative Automation Bundle.\n\n";
+  r+="## What is where, and why\n\n";
+  r+="| Thing | Lives in | Because |\n|---|---|---|\n";
+  r+="| Catalogs, schemas, volumes, grants | the bundle | They are workspace assets with bundle resource types |\n";
+  r+="| Groups, service principals | `identity/` (Terraform) | Bundles have no resource type for account-level identity |\n\n";
+  r+="Apply `identity/` first. The bundle's grants name principals by string, so\ndeploying the bundle against principals that do not exist fails at grant time,\nafter the catalogs have already been created.\n\n";
+  r+="## Isolation model\n\n";
+  r+=perCatalog
+    ? "**Catalog per environment.** `"+S.org+"_"+doms[0]+"_dev`, `"+S.org+"_"+doms[0]+"_prod`, each holding "+layers.join(", ")+".\n\nStronger blast radius containment: a grant mistake in dev cannot expose prod,\nand the names make the environment obvious in every query. Costs you more\ncatalogs to administer and makes cross-environment comparison queries awkward.\n"
+    : "**Schema per environment.** One `"+S.org+"_"+doms[0]+"` catalog holding "+layers.map(function(l){return l+"_dev";}).join(", ")+" and so on.\n\nFewer catalogs, and cross-environment queries work without federation. The\ntrade-off is that every environment shares one permission boundary, so a\nmis-scoped grant reaches production.\n";
+  r+="\n## Deploying\n\n```bash\ndatabricks bundle validate --strict --target "+envs[0]+"\ndatabricks bundle deploy --target "+envs[0]+"\n```\n\n";
+  r+="## Before first deploy\n\n- A metastore must be attached to the workspace.\n- Set `storage_root` if these catalogs need managed storage of their own; leaving\n  it empty inherits the metastore default.\n- The deploying principal needs `CREATE CATALOG` on the metastore.\n";
+  F["README.md"]=r;
+  F[".gitignore"]=".databricks/\n*.tfstate\n*.tfstate.*\n.terraform/\n";
+  return F;
+}
+
+/* ===================== PIPELINES: SDP bundle ===================== */
+function buildPipelines(){
+  var F={},names=P.names,envs=S.envs,bundleName=S.org+"-"+S.proj+"-pipelines";
+  var layers=["bronze","silver","gold"];
+
+  var y="# "+bundleName+"\n# Generated by Brickworks. Review before deploying.\n\n";
+  y+="bundle:\n  name: "+bundleName+"\n\ninclude:\n  - resources/*.yml\n\n";
+  y+="variables:\n  catalog:\n    description: Target catalog for these pipelines\n    default: "+S.org+"_"+S.proj+"_dev\n";
+  y+="  source_volume:\n    description: Volume path the raw files land in\n    default: /Volumes/"+S.org+"_"+S.proj+"_dev/bronze/landing\n";
+  if(P.src==="kafka")y+="  kafka_bootstrap:\n    description: Kafka bootstrap servers\n    default: \"\"\n";
+  y+="\ntargets:\n";
+  envs.forEach(function(en,i){
+    y+="  "+en+":\n";
+    if(i===0)y+="    default: true\n";
+    y+="    mode: "+(en==="prod"?"production":"development")+"\n";
+    y+="    variables:\n      catalog: "+S.org+"_"+S.proj+"_"+en+"\n";
+    y+="      source_volume: /Volumes/"+S.org+"_"+S.proj+"_"+en+"/bronze/landing\n";
+    if(en==="prod")y+="    workspace:\n      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}\n";
+    y+="\n";
+  });
+  F["databricks.yml"]=y;
+
+  names.forEach(function(n){
+    var r="# "+n+" pipeline\n\nresources:\n  pipelines:\n    "+n+":\n";
+    r+="      name: "+S.org+"-"+n+"-${bundle.target}\n\n";
+    r+="      catalog: ${var.catalog}\n      schema: "+layers[1]+"\n\n";
+    r+="      # root_path with libraries.glob is the current layout. Public preview.\n";
+    r+="      root_path: ../src/pipelines/"+n+"\n\n";
+    r+="      libraries:\n        - glob:\n            include: ../src/pipelines/"+n+"/transformations/**\n\n";
+    r+="      serverless: "+(P.serverless?"true":"false")+"\n";
+    if(!P.serverless)r+="      photon: true\n";
+    if(P.trig==="continuous"){
+      r+="      # Deprecated in favour of a continuous job setting, which takes\n";
+      r+="      # precedence where both are set. Still valid, and clearer in one file.\n";
+      r+="      continuous: true\n";
+    }
+    // No `development:` field: it is deprecated, and `mode: development` on the
+    // target already governs development behaviour for the bundle.
+    r+="      channel: CURRENT\n\n";
+    r+="      configuration:\n        source_volume: ${var.source_volume}\n        pipeline_name: "+n+"\n";
+    if(P.src==="kafka")r+="        kafka_bootstrap: ${var.kafka_bootstrap}\n";
+    r+="\n      permissions:\n        - level: CAN_VIEW\n          group_name: users\n";
+    F["resources/"+n+".pipeline.yml"]=r;
+
+    /* ---- transformations ---- */
+    var src="";
+    src+="# "+n+" — "+layers[0]+" to "+layers[2]+"\n#\n# Declarative pipeline source. Tables are declared, not written: the runtime\n# works out the order from the dependencies between them.\n\n";
+    src+="from pyspark import pipelines as dp\nfrom pyspark.sql import functions as F\n\n";
+    src+="# Pipeline configuration, set in the resource YAML and overridden per target.\n";
+    src+="source_volume = spark.conf.get(\"source_volume\")\n";
+    if(P.src==="kafka")src+="kafka_bootstrap = spark.conf.get(\"kafka_bootstrap\")\n";
+    src+="\n\n";
+
+    src+="@dp.table(\n    name=\""+n+"_bronze\",\n    comment=\"Raw "+n+", landed as received. No reshaping here.\",\n    table_properties={\"quality\": \"bronze\"},\n)\ndef "+n+"_bronze():\n";
+    if(P.src==="files"){
+      src+="    return (\n        spark.readStream.format(\"cloudFiles\")\n        .option(\"cloudFiles.format\", \"json\")\n        .option(\"cloudFiles.inferColumnTypes\", \"true\")\n        .option(\"cloudFiles.schemaLocation\", f\"{source_volume}/_schema/"+n+"\")\n        .load(f\"{source_volume}/"+n+"\")\n        .withColumn(\"_ingested_at\", F.current_timestamp())\n        .withColumn(\"_source_file\", F.col(\"_metadata.file_path\"))\n    )\n\n\n";
+    } else if(P.src==="kafka"){
+      src+="    return (\n        spark.readStream.format(\"kafka\")\n        .option(\"kafka.bootstrap.servers\", kafka_bootstrap)\n        .option(\"subscribe\", \""+n+"\")\n        .option(\"startingOffsets\", \"earliest\")\n        .load()\n        .select(\n            F.col(\"key\").cast(\"string\").alias(\"key\"),\n            F.col(\"value\").cast(\"string\").alias(\"raw\"),\n            F.col(\"timestamp\").alias(\"_kafka_timestamp\"),\n        )\n        .withColumn(\"_ingested_at\", F.current_timestamp())\n    )\n\n\n";
+    } else {
+      src+="    return (\n        spark.readStream.table(f\"{spark.conf.get('catalog')}.bronze."+n+"_raw\")\n        .withColumn(\"_ingested_at\", F.current_timestamp())\n    )\n\n\n";
+    }
+
+    if(P.expect){
+      src+="# Expectations run per row. Failing rows are dropped and counted in the\n# pipeline's data quality metrics, not quarantined anywhere. One decorator per\n# constraint; they stack.\n";
+      src+="@dp.table(\n    name=\""+n+"_silver\",\n    comment=\"Validated and typed "+n+".\",\n    table_properties={\"quality\": \"silver\"},\n)\n";
+      src+="@dp.expect_or_drop(\"id_present\", \"id IS NOT NULL\")\n";
+      src+="@dp.expect_or_drop(\"ingested\", \"_ingested_at IS NOT NULL\")\n";
+      src+="def "+n+"_silver():\n";
+    } else {
+      src+="@dp.table(\n    name=\""+n+"_silver\",\n    comment=\"Validated and typed "+n+".\",\n    table_properties={\"quality\": \"silver\"},\n)\ndef "+n+"_silver():\n";
+    }
+    src+="    return (\n        spark.readStream.table(\""+n+"_bronze\")\n        .dropDuplicates([\"id\"])\n    )\n\n\n";
+
+    src+="@dp.materialized_view(\n    name=\""+n+"_gold\",\n    comment=\"Daily "+n+" aggregate for reporting.\",\n    table_properties={\"quality\": \"gold\"},\n)\ndef "+n+"_gold():\n";
+    src+="    return (\n        spark.read.table(\""+n+"_silver\")\n        .groupBy(F.to_date(\"_ingested_at\").alias(\"day\"))\n        .agg(F.count(\"*\").alias(\"record_count\"))\n    )\n";
+    F["src/pipelines/"+n+"/transformations/"+n+".py"]=src;
+  });
+
+  if(P.job){
+    var j="# Runs every pipeline in this bundle on a schedule.\n\nresources:\n  jobs:\n    "+S.proj+"_pipelines:\n";
+    j+="      name: "+S.org+"-"+S.proj+"-pipelines-${bundle.target}\n\n";
+    j+="      tasks:\n";
+    names.forEach(function(n){
+      j+="        - task_key: "+n+"\n          pipeline_task:\n            pipeline_id: ${resources.pipelines."+n+".id}\n\n";
+    });
+    j+="      schedule:\n        # Off the hour: scheduled work piles up on :00 and queues behind itself.\n        quartz_cron_expression: \"0 23 4 * * ?\"\n        timezone_id: Europe/London\n        pause_status: '${bundle.target == \"prod\" ? \"UNPAUSED\" : \"PAUSED\"}'\n\n";
+    j+="      queue:\n        enabled: true\n\n";
+    j+="      email_notifications:\n        on_failure:\n          - ${workspace.current_user.userName}\n";
+    F["resources/"+S.proj+"_pipelines.job.yml"]=j;
+  }
+
+  F[".github/workflows/deploy.yml"]=
+"name: pipelines\n\non:\n  push:\n    branches: [main]\n  pull_request:\n\npermissions:\n  id-token: write\n  contents: read\n\nconcurrency:\n  group: pipelines-${{ github.ref }}\n  cancel-in-progress: false\n\njobs:\n"+
+envs.map(function(en,i){
+  return "  "+en+":\n    runs-on: ubuntu-latest\n    environment: "+en+"\n"+(i>0?"    needs: "+envs[i-1]+"\n":"")+
+  "    env:\n      DATABRICKS_AUTH_TYPE: "+authType()+"\n      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}\n      DATABRICKS_HOST: ${{ vars.DATABRICKS_WORKSPACE_URL }}\n"+
+  "    steps:\n      - uses: actions/checkout@v4\n\n      - uses: databricks/setup-cli@main\n\n      - name: Validate\n        run: databricks bundle validate --strict --target "+en+"\n\n"+
+  "      - name: Deploy\n        if: github.event_name == 'push'\n        run: databricks bundle deploy --target "+en+"\n";
+}).join("\n");
+
+  var r="# "+bundleName+"\n\n"+names.length+" Spark Declarative Pipeline(s), bronze to gold, as a bundle.\n\n";
+  r+="## Layout\n\n```\nresources/<name>.pipeline.yml      the pipeline definition\nsrc/pipelines/<name>/transformations/   the table declarations\n```\n\n";
+  r+="`root_path` plus a `libraries.glob` means new transformation files are picked\nup without editing the resource YAML.\n\n";
+  r+="## Source\n\n"+(P.src==="files"
+    ? "Auto Loader reads from the landing volume. The schema location sits under the\nsame volume, so schema inference survives across runs — do not point it at a\npath the pipeline cannot write to."
+    : P.src==="kafka"
+    ? "Reads from Kafka, keeping the payload as a string in bronze. Parse in silver\nrather than bronze: when a producer changes shape, you want the raw bytes still\nlanded so the fix is a replay rather than a loss."
+    : "Reads an existing bronze table as a stream, for when ingestion is someone\nelse's pipeline.")+"\n\n";
+  r+="## Execution\n\n"+(P.trig==="continuous"
+    ? "**Continuous.** Compute stays up and tables update as data arrives. Costs more;\nuse it where latency genuinely matters."
+    : "**Triggered.** Each run processes what has arrived and stops. Cheaper, and the\nright default — move to continuous only when a latency requirement forces it.")+"\n";
+  r+=P.serverless?"\nServerless compute: no cluster configuration, and no cluster tags either, so\ncost attribution needs a budget policy.\n":"\nClassic compute with Photon.\n";
+  r+="\n## Deploying\n\n```bash\ndatabricks bundle validate --strict --target "+envs[0]+"\ndatabricks bundle deploy --target "+envs[0]+"\ndatabricks bundle run "+names[0]+" --target "+envs[0]+"\n```\n";
+  F["README.md"]=r;
+  F[".gitignore"]=".databricks/\n__pycache__/\n*.pyc\n";
+  return F;
+}
+
+function build(){
+  return TAB==="governance" ? buildGovernance()
+       : TAB==="pipelines"  ? buildPipelines()
+       : buildPlatform();
+}
+
 /* ---------- rendering ---------- */
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function hl(src,path){
@@ -1035,7 +1409,7 @@ function tree(){
   document.getElementById("treebody").innerHTML=html;
 }
 function showFile(){
-  if(!FILES[CUR])CUR=Object.keys(FILES)[0];
+  if(!CUR||!FILES[CUR])CUR=FILES["README.md"]?"README.md":Object.keys(FILES)[0];
   document.getElementById("curpath").textContent=CUR;
   document.getElementById("code").innerHTML=hl(FILES[CUR],CUR);
 }
@@ -1081,30 +1455,33 @@ function render(){
   Object.keys(FILES).forEach(function(k){bytes+=FILES[k].length;});
   document.getElementById("nfiles").textContent=n;
   document.getElementById("nbytes").textContent=(bytes/1024).toFixed(1);
-  document.getElementById("reponame").textContent=S.org+"-"+S.proj+"-databricks";
-  document.getElementById("modehint").textContent=
+  document.getElementById("reponame").textContent=
+    S.org+"-"+S.proj+(TAB==="platform"?"-databricks":TAB==="governance"?"-governance":"-pipelines");
+  if(TAB==="platform")document.getElementById("modehint").textContent=
     S.mode==="classic"?"Customer-managed network. No NCC.":
     S.mode==="serverless"?"NCC and bindings. No VPC or NAT gateway to pay for.":
     "Both paths. Most production deployments land here.";
-  tree();showFile();renderNames();renderCost();
+  tree();showFile();
+  if(TAB==="platform"){renderNames();renderCost();}
 }
 
 /* ---------- wiring ---------- */
-function seg(id,key,after){
-  var el=document.getElementById(id);
+function seg(id,key,after,target,then){
+  var el=document.getElementById(id),obj=target||S;
   el.addEventListener("click",function(ev){
     var b=ev.target.closest("button[data-v]");if(!b)return;
     var bs=[].slice.call(el.querySelectorAll("button"));
     bs.forEach(function(x){x.setAttribute("aria-selected",String(x===b));});
     el.style.setProperty("--i",bs.indexOf(b));
-    S[key]=b.dataset.v;if(after)after();render();
+    obj[key]=b.dataset.v;if(after)after();if(then)then();render();
   });
+  if(then)then();
 }
-function sw(id,key){
-  var el=document.getElementById(id);
+function sw(id,key,target){
+  var el=document.getElementById(id),obj=target||S;
   el.addEventListener("click",function(){
     var v=el.getAttribute("aria-checked")!=="true";
-    el.setAttribute("aria-checked",String(v));S[key]=v;render();
+    el.setAttribute("aria-checked",String(v));obj[key]=v;render();
   });
 }
 function fillRegions(){
@@ -1173,11 +1550,11 @@ function copy(text,btn,label){
 document.getElementById("copyfile").addEventListener("click",function(){
   copy(FILES[CUR],this,"Copied");});
 document.getElementById("copyall").addEventListener("click",function(){
-  var s="#!/usr/bin/env bash\nset -euo pipefail\n\n# "+S.org+"-"+S.proj+"-databricks — generated by BricksWork\n\n";
+  var s="#!/usr/bin/env bash\nset -euo pipefail\n\n# "+document.getElementById("reponame").textContent+" — generated by Brickworks\n\n";
   Object.keys(FILES).sort().forEach(function(p){
     var dir=p.indexOf("/")>-1?p.slice(0,p.lastIndexOf("/")):"";
     if(dir)s+='mkdir -p "'+dir+'"\n';
-    s+="cat > '"+p+"' <<'BRICKSWORK_EOF'\n"+FILES[p]+"BRICKSWORK_EOF\n\n";
+    s+="cat > '"+p+"' <<'BRICKWORKS_EOF'\n"+FILES[p]+"BRICKWORKS_EOF\n\n";
   });
   s+='echo "Repo written. Next: read bootstrap/README.md and run seed.sh in the cloud shell."\n';
   copy(s,this,"Copied");
@@ -1203,7 +1580,7 @@ function doDownload(btn){
   var note=document.getElementById("dlnote"),label=btn.textContent;
   if(typeof JSZip==="undefined"){
     note.textContent="The zip library didn't load. Use Copy as shell script instead.";return;}
-  var root=S.org+"-"+S.proj+"-databricks",zip=new JSZip();
+  var root=document.getElementById("reponame").textContent,zip=new JSZip();
   Object.keys(FILES).forEach(function(p){zip.file(root+"/"+p,FILES[p]);});
   btn.disabled=true;btn.textContent="Zipping…";
   Promise.all([zip.generateAsync({type:"blob"}),downloader()]).then(function(r){
@@ -1267,6 +1644,76 @@ document.getElementById("sharecfg").addEventListener("click",function(){
 });
 
 var restored=applyCfg();
+
+var TABNOTE={
+  platform:"The workspace itself: networking, the Databricks workspace, Unity Catalog attachment, and GitHub Actions with OIDC. Terraform.",
+  governance:"Catalogs, schemas, volumes and grants as a bundle — plus the groups and service principals as Terraform, because bundles cannot create identity.",
+  pipelines:"Spark Declarative Pipelines bronze to gold, with their transformations and an optional scheduling job. A bundle."
+};
+function setTab(t){
+  TAB=t;CUR=null;
+  [].slice.call(document.querySelectorAll(".tabs button")).forEach(function(b){
+    b.setAttribute("aria-selected",String(b.dataset.tab===t));});
+  [].slice.call(document.querySelectorAll(".panel.pf")).forEach(function(p){p.hidden=(t!=="platform");});
+  document.getElementById("rail-shared").hidden=(t==="platform");
+  document.getElementById("rail-governance").hidden=(t!=="governance");
+  document.getElementById("rail-pipelines").hidden=(t!=="pipelines");
+  document.getElementById("tabnote").textContent=TABNOTE[t];
+  render();
+}
+document.querySelector(".tabs").addEventListener("click",function(ev){
+  var b=ev.target.closest("button[data-tab]");if(b)setTab(b.dataset.tab);
+});
+
+/* governance controls */
+seg("seg-iso","iso",null,G,function(){
+  document.getElementById("isohint").textContent = G.iso==="catalog"
+    ? "Separate catalogs per environment. Stronger isolation, more to administer."
+    : "One catalog, schemas suffixed per environment. Fewer objects, one permission boundary.";
+});
+["groups","sp","vol"].forEach(function(k){sw("g-"+k,k,G);});
+document.getElementById("g-domains").addEventListener("input",function(){
+  G.domains=listOf("g-domains",["domain"]);render();});
+document.getElementById("g-layers").addEventListener("click",function(ev){
+  var c=ev.target.closest(".chip");if(!c)return;
+  var on=c.getAttribute("aria-pressed")==="true";
+  if(on&&this.querySelectorAll('.chip[aria-pressed="true"]').length===1)return;
+  c.setAttribute("aria-pressed",String(!on));
+  G.layers=[].slice.call(this.querySelectorAll('.chip[aria-pressed="true"]')).map(function(x){return x.dataset.v;});
+  render();
+});
+
+/* pipelines controls */
+seg("seg-src","src",null,P,function(){
+  document.getElementById("srchint").textContent =
+    P.src==="files" ? "Auto Loader from a Unity Catalog volume."
+    : P.src==="kafka" ? "Kafka source; payload kept raw in bronze and parsed in silver."
+    : "Streams an existing bronze table that something else populates.";
+});
+seg("seg-trig","trig",null,P);
+["serverless","expect","job"].forEach(function(k){sw("p-"+k,k,P);});
+document.getElementById("p-names").addEventListener("input",function(){
+  P.names=listOf("p-names",["pipeline"]);render();});
+
+/* shared naming, mirrored both ways with the platform fields */
+function mirror(a,b,key){
+  document.getElementById(a).addEventListener("input",function(e){
+    var v=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,"")||(key==="org"?"acme":"workload");
+    S[key]=v;document.getElementById(b).value=e.target.value;render();});
+}
+mirror("s-org","f-org","org");
+mirror("s-proj","f-proj","proj");
+document.getElementById("s-envs").addEventListener("click",function(ev){
+  var c=ev.target.closest(".chip");if(!c)return;
+  var on=c.getAttribute("aria-pressed")==="true";
+  if(on&&this.querySelectorAll('.chip[aria-pressed="true"]').length===1)return;
+  c.setAttribute("aria-pressed",String(!on));
+  S.envs=[].slice.call(this.querySelectorAll('.chip[aria-pressed="true"]')).map(function(x){return x.dataset.v;});
+  [].slice.call(document.querySelectorAll("#envs .chip")).forEach(function(x){
+    x.setAttribute("aria-pressed",String(S.envs.indexOf(x.dataset.v)>-1));});
+  render();
+});
+
 fillRegions();
 if(restored){
   var sel=document.getElementById("f-region");
