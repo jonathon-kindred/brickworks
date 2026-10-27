@@ -939,7 +939,10 @@ function buildPlatform(){
   F["modules/naming/main.tf"]=hdr("naming — single source of truth for every resource name")+
     'variable "org" {\n  type = string\n}\n\nvariable "workload" {\n  type = string\n}\n\nvariable "env" {\n  type = string\n}\n\n'+
     'locals {\n  pattern = "'+S.pattern+'"\n\n  name = {\n'+
-    '    for res in ["vpc", "ws", "rg", "root", "dls", "ncc", "pas", "cmk"] :\n'+
+    '    for res in [\n'+
+    '      "vpc", "ws", "rg", "root", "dls", "ncc", "pas", "cmk",\n'+
+    '      "crossaccount", "creds", "storage", "logs", "logstorage", "audit",\n'+
+    '    ] :\n'+
     '    res => replace(replace(replace(replace(local.pattern,\n'+
     '      "{org}", var.org), "{workload}", var.workload), "{env}", var.env), "{res}", res)\n  }\n\n'+
     '  # Azure storage accounts reject hyphens and cap at 24 characters.\n'+
@@ -948,36 +951,41 @@ function buildPlatform(){
 
   /* ---- 00-account ---- */
   F["stacks/00-account/providers.tf"]=hdr("00-account providers")+providersAccount();
-  var a=hdr("00-account — regional, shared across every workspace in this region");
+  var a=hdr("00-account — per environment. One set of these per env, never shared.");
+  a+='# Every resource here is environment-scoped. Databricks permits sharing a\n';
+  a+='# credentials or storage configuration across workspaces, but sharing one\n';
+  a+='# between dev and prod puts both behind a single IAM role and a single root\n';
+  a+='# bucket, and it stops each environment living in its own AWS account.\n\n';
+  a+='module "naming" {\n  source   = "../../modules/naming"\n  org      = var.org\n  workload = var.workload\n  env      = var.env\n}\n\n';
   if(S.cloud==="aws"){
     a+='# These carry the provider alias like every other databricks block: the only\n# databricks provider configured here is aliased, so an unqualified block would\n# fall back to an empty default configuration and fail to authenticate.\n';
     a+='data "databricks_aws_assume_role_policy" "this" {\n  provider    = databricks.account\n  external_id = var.databricks_account_id\n}\n\n';
     a+='data "databricks_aws_crossaccount_policy" "this" {\n  provider = databricks.account\n}\n\n';
-    a+='resource "aws_iam_role" "cross_account" {\n  name               = "'+nm("crossaccount","shared")+'"\n  assume_role_policy = data.databricks_aws_assume_role_policy.this.json\n}\n\n';
-    a+='resource "aws_iam_role_policy" "cross_account" {\n  name   = "'+nm("crossaccount","shared")+'"\n  role   = aws_iam_role.cross_account.id\n  policy = data.databricks_aws_crossaccount_policy.this.json\n}\n\n';
-    a+='resource "aws_s3_bucket" "root" {\n  bucket        = "'+nm("root","shared")+'"\n  force_destroy = false\n}\n\n';
+    a+='resource "aws_iam_role" "cross_account" {\n  name               = module.naming.name["crossaccount"]\n  assume_role_policy = data.databricks_aws_assume_role_policy.this.json\n}\n\n';
+    a+='resource "aws_iam_role_policy" "cross_account" {\n  name   = module.naming.name["crossaccount"]\n  role   = aws_iam_role.cross_account.id\n  policy = data.databricks_aws_crossaccount_policy.this.json\n}\n\n';
+    a+='resource "aws_s3_bucket" "root" {\n  bucket        = module.naming.name["root"]\n  force_destroy = false\n}\n\n';
     a+='resource "aws_s3_bucket_public_access_block" "root" {\n  bucket                  = aws_s3_bucket.root.id\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n}\n\n';
     a+='data "databricks_aws_bucket_policy" "root" {\n  provider = databricks.account\n  bucket   = aws_s3_bucket.root.bucket\n}\n\n';
     a+='resource "aws_s3_bucket_policy" "root" {\n  bucket = aws_s3_bucket.root.id\n  policy = data.databricks_aws_bucket_policy.root.json\n}\n\n';
     a+='# IAM is eventually consistent. Without this the first apply usually fails with\n# MALFORMED_REQUEST on the credentials registration.\nresource "time_sleep" "iam" {\n  depends_on      = [aws_iam_role_policy.cross_account]\n  create_duration = "20s"\n}\n\n';
     a+='# Credentials and storage configs are shareable across workspaces. Networks are not.\n';
-    a+='resource "databricks_mws_credentials" "this" {\n  provider         = databricks.account\n  depends_on       = [time_sleep.iam]\n  credentials_name = "'+nm("creds","shared")+'"\n  role_arn         = aws_iam_role.cross_account.arn\n}\n\n';
-    a+='resource "databricks_mws_storage_configurations" "this" {\n  provider                   = databricks.account\n  storage_configuration_name = "'+nm("storage","shared")+'"\n  bucket_name                = aws_s3_bucket.root.bucket\n}\n\n';
-    if(S.pl)a+='resource "databricks_mws_private_access_settings" "this" {\n  provider                     = databricks.account\n  private_access_settings_name = "'+nm("pas","shared")+'"\n  region                       = var.region\n  public_access_enabled        = false\n  private_access_level         = "ACCOUNT"\n}\n\n';
+    a+='resource "databricks_mws_credentials" "this" {\n  provider         = databricks.account\n  account_id       = var.databricks_account_id\n  depends_on       = [time_sleep.iam]\n  credentials_name = module.naming.name["creds"]\n  role_arn         = aws_iam_role.cross_account.arn\n}\n\n';
+    a+='resource "databricks_mws_storage_configurations" "this" {\n  provider                   = databricks.account\n  account_id                 = var.databricks_account_id\n  storage_configuration_name = module.naming.name["storage"]\n  bucket_name                = aws_s3_bucket.root.bucket\n}\n\n';
+    if(S.pl)a+='resource "databricks_mws_private_access_settings" "this" {\n  provider                     = databricks.account\n  account_id                   = var.databricks_account_id\n  private_access_settings_name = module.naming.name["pas"]\n  region                       = var.region\n  public_access_enabled        = false\n  private_access_level         = "ACCOUNT"\n}\n\n';
     if(S.cmk){
       a+='resource "aws_kms_key" "this" {\n  description         = "Databricks managed services and workspace storage"\n  enable_key_rotation = true\n}\n\n';
-      a+='resource "aws_kms_alias" "this" {\n  name          = "alias/'+nm("cmk","shared")+'"\n  target_key_id = aws_kms_key.this.key_id\n}\n\n';
-      a+='resource "databricks_mws_customer_managed_keys" "this" {\n  provider = databricks.account\n  aws_key_info {\n    key_arn   = aws_kms_key.this.arn\n    key_alias = aws_kms_alias.this.name\n  }\n  use_cases = ["MANAGED_SERVICES", "STORAGE"]\n}\n\n';
+      a+='resource "aws_kms_alias" "this" {\n  name          = "alias/${module.naming.name["cmk"]}"\n  target_key_id = aws_kms_key.this.key_id\n}\n\n';
+      a+='resource "databricks_mws_customer_managed_keys" "this" {\n  provider   = databricks.account\n  account_id = var.databricks_account_id\n  aws_key_info {\n    key_arn   = aws_kms_key.this.arn\n    key_alias = aws_kms_alias.this.name\n  }\n  use_cases = ["MANAGED_SERVICES", "STORAGE"]\n}\n\n';
     }
     if(S.log){
-      a+='resource "aws_s3_bucket" "logs" {\n  bucket = "'+nm("logs","shared")+'"\n}\n\n';
-      a+='resource "databricks_mws_storage_configurations" "logs" {\n  provider                   = databricks.account\n  storage_configuration_name = "'+nm("logstorage","shared")+'"\n  bucket_name                = aws_s3_bucket.logs.bucket\n}\n\n';
-      a+='resource "databricks_mws_log_delivery" "audit" {\n  provider                 = databricks.account\n  credentials_id           = databricks_mws_credentials.this.credentials_id\n  storage_configuration_id = databricks_mws_storage_configurations.logs.storage_configuration_id\n  delivery_path_prefix     = "audit-logs"\n  config_name              = "'+nm("audit","shared")+'"\n  log_type                 = "AUDIT_LOGS"\n  output_format            = "JSON"\n}\n\n';
+      a+='resource "aws_s3_bucket" "logs" {\n  bucket = module.naming.name["logs"]\n}\n\n';
+      a+='resource "databricks_mws_storage_configurations" "logs" {\n  provider                   = databricks.account\n  account_id                 = var.databricks_account_id\n  storage_configuration_name = module.naming.name["logstorage"]\n  bucket_name                = aws_s3_bucket.logs.bucket\n}\n\n';
+      a+='resource "databricks_mws_log_delivery" "audit" {\n  provider                 = databricks.account\n  account_id               = var.databricks_account_id\n  credentials_id           = databricks_mws_credentials.this.credentials_id\n  storage_configuration_id = databricks_mws_storage_configurations.logs.storage_configuration_id\n  delivery_path_prefix     = "audit-logs"\n  config_name              = module.naming.name["audit"]\n  log_type                 = "AUDIT_LOGS"\n  output_format            = "JSON"\n}\n\n';
     }
   }
   if(srv){
     a+='# NCCs are regional and shared. One per region, attached to many workspaces.\n';
-    a+='resource "databricks_mws_network_connectivity_config" "this" {\n  provider = databricks.account\n  name     = "'+nm("ncc","shared")+'"\n  region   = var.region\n}\n\n';
+    a+='resource "databricks_mws_network_connectivity_config" "this" {\n  provider   = databricks.account\n  account_id = var.databricks_account_id\n  name     = module.naming.name["ncc"]\n  region   = var.region\n}\n\n';
     if(S.cloud==="gcp")a+='# Private endpoint rules are not available in the provider on GCP.\n# Create them in the account console once this NCC exists.\n\n';
   }
   a+='# Attach to the metastore that already exists in this region. Never create one:\n# there is exactly one per region per account, and creating a second will fail\n# or collide with a shared production metastore.\ndata "databricks_metastore" "this" {\n  provider = databricks.account\n  region   = var.region\n}\n';
@@ -1043,7 +1051,7 @@ function buildPlatform(){
     w+='}\n\n';
   }
   if(srv){
-    w+='resource "databricks_mws_ncc_binding" "this" {\n  provider                       = databricks.account\n  network_connectivity_config_id = var.ncc_id\n  workspace_id                   = '+
+    w+='resource "databricks_mws_ncc_binding" "this" {\n  provider                       = databricks.account\n  account_id                     = var.databricks_account_id\n  network_connectivity_config_id = var.ncc_id\n  workspace_id                   = '+
       (S.cloud==="azure"?'azurerm_databricks_workspace.this.workspace_id':'databricks_mws_workspaces.this.workspace_id')+'\n}\n\n';
   }
   w+='resource "databricks_metastore_assignment" "this" {\n  provider             = databricks.account\n  metastore_id         = var.metastore_id\n  workspace_id         = '+
@@ -1099,12 +1107,16 @@ function buildPlatform(){
       '# '+en+'\norg      = "'+S.org+'"\nworkload = "'+S.proj+'"\nenv      = "'+en+'"\nregion   = "'+S.region+'"\n\n'+
       (S.cloud==="aws"?'vpc_cidr = "10.'+(S.envs.indexOf(en)+10)+'.0.0/16"\n':
        S.cloud==="azure"?'vnet_cidr = "10.'+(S.envs.indexOf(en)+10)+'.0.0/16"\n':'subnet_cidr = "10.'+(S.envs.indexOf(en)+10)+'.0.0/16"\n');
-    F["envs/"+en+"/backend.hcl"]=
-      (S.cloud==="aws"?
-        'bucket       = "'+squash(S.org+S.proj)+'-tfstate"\nkey          = "'+en+'/10-workspace.tfstate"\nregion       = "'+S.region+'"\nencrypt      = true\nuse_lockfile = true\n':
-       S.cloud==="azure"?
-        'resource_group_name  = "'+nm("rg","shared")+'-tfstate"\nstorage_account_name = "'+squash(S.org+"tfstate")+'"\ncontainer_name       = "tfstate"\nkey                  = "'+en+'/10-workspace.tfstate"\nuse_oidc             = true\nuse_azuread_auth     = true\n':
-        'bucket = "'+squash(S.org+S.proj)+'-tfstate"\nprefix = "'+en+'/10-workspace"\n');
+    // One state file per stack per environment. A single shared key would make
+    // the second stack's apply adopt and then destroy the first stack's resources.
+    ["00-account","10-workspace","20-workspace-config"].forEach(function(st){
+      F["envs/"+en+"/"+st+".backend.hcl"]=
+        (S.cloud==="aws"?
+          'bucket       = "'+squash(S.org+S.proj)+'-tfstate"\nkey          = "'+en+'/'+st+'.tfstate"\nregion       = "'+S.region+'"\nencrypt      = true\nuse_lockfile = true\n':
+         S.cloud==="azure"?
+          'resource_group_name  = "'+nm("rg","shared")+'-tfstate"\nstorage_account_name = "'+squash(S.org+"tfstate")+'"\ncontainer_name       = "tfstate"\nkey                  = "'+en+'/'+st+'.tfstate"\nuse_oidc             = true\nuse_azuread_auth     = true\n':
+          'bucket = "'+squash(S.org+S.proj)+'-tfstate"\nprefix = "'+en+'/'+st+'"\n');
+    });
   });
 
   /* ---- workflows ---- */
@@ -1114,29 +1126,92 @@ function buildPlatform(){
     "      - uses: azure/login@v2\n        with:\n          client-id: ${{ vars.ARM_CLIENT_ID }}\n          tenant-id: ${{ vars.ARM_TENANT_ID }}\n          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}\n":
     "      - uses: google-github-actions/auth@v2\n        with:\n          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}\n          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}\n";
 
-  F[".github/workflows/plan.yml"]=
-"name: plan\n\non:\n  pull_request:\n\n# Read-only identity. Never the apply role: plan reads state, and state holds secrets.\npermissions:\n  id-token: write\n  contents: read\n  pull-requests: write\n\nconcurrency:\n  group: plan-${{ github.ref }}\n  cancel-in-progress: true\n\njobs:\n  plan:\n    runs-on: ubuntu-latest\n    strategy:\n      fail-fast: false\n      matrix:\n        stack: [00-account, 10-workspace, 20-workspace-config]\n    env:\n      DATABRICKS_AUTH_TYPE: "+(S.cloud==="azure"?"github-oidc-azure":"github-oidc")+"\n      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}\n      DATABRICKS_ACCOUNT_ID: ${{ vars.DATABRICKS_ACCOUNT_ID }}\n    steps:\n      - uses: actions/checkout@v4\n"+login+
-"      - uses: hashicorp/setup-terraform@v3\n        with:\n          terraform_version: 1.9.8\n\n      - run: terraform fmt -check -recursive\n\n      - name: Init\n        working-directory: stacks/${{ matrix.stack }}\n        run: terraform init -backend-config=../../envs/"+e0+"/backend.hcl\n\n      - name: Plan\n        working-directory: stacks/${{ matrix.stack }}\n        run: terraform plan -var-file=../../envs/"+e0+"/terraform.tfvars\n";
+  /* ---------- one workflow: init, validate, plan, apply ---------- */
+  var login=S.cloud==="aws"?
+    "          role-to-assume: ROLE_PLACEHOLDER\n          aws-region: ${{ vars.AWS_REGION }}\n":
+    S.cloud==="azure"?
+    "          client-id: ${{ vars.ARM_CLIENT_ID }}\n          tenant-id: ${{ vars.ARM_TENANT_ID }}\n          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}\n":
+    "          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}\n          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}\n";
+  var loginAction=S.cloud==="aws"?"aws-actions/configure-aws-credentials@v4":
+                  S.cloud==="azure"?"azure/login@v2":"google-github-actions/auth@v2";
 
-  var applyJobs="";
-  S.envs.forEach(function(en,i){
-    applyJobs+="  "+en+":\n    runs-on: ubuntu-latest\n    environment: "+en+"\n"+(i>0?"    needs: "+S.envs[i-1]+"\n":"")+
-    "    strategy:\n      max-parallel: 1\n      matrix:\n        stack: [00-account, 10-workspace, 20-workspace-config]\n"+
-    "    env:\n      DATABRICKS_AUTH_TYPE: "+(S.cloud==="azure"?"github-oidc-azure":"github-oidc")+"\n      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}\n      DATABRICKS_ACCOUNT_ID: ${{ vars.DATABRICKS_ACCOUNT_ID }}\n"+
-    "    steps:\n      - uses: actions/checkout@v4\n"+
-    (S.cloud==="aws"?"      - uses: aws-actions/configure-aws-credentials@v4\n        with:\n          role-to-assume: ${{ vars.AWS_APPLY_ROLE_ARN }}\n          aws-region: ${{ vars.AWS_REGION }}\n":login)+
-    "      - uses: hashicorp/setup-terraform@v3\n        with:\n          terraform_version: 1.9.8\n\n"+
-    "      - name: Init\n        working-directory: stacks/${{ matrix.stack }}\n        run: terraform init -backend-config=../../envs/"+en+"/backend.hcl\n\n"+
-    "      # Re-planned here rather than carried from the PR job. A saved plan file holds\n      # resolved values in cleartext, so it is not something to upload as an artifact.\n      - name: Apply\n        working-directory: stacks/${{ matrix.stack }}\n        run: terraform apply -auto-approve -var-file=../../envs/"+en+"/terraform.tfvars\n\n";
-  });
-  F[".github/workflows/apply.yml"]=
-"name: apply\n\non:\n  push:\n    branches: [main]\n\npermissions:\n  id-token: write\n  contents: read\n\n# cancel-in-progress stays false. Cancelling mid-apply strands the state lock.\nconcurrency:\n  group: apply\n  cancel-in-progress: false\n\njobs:\n"+applyJobs;
+  function loginStep(roleVar){
+    return "      - uses: "+loginAction+"\n        with:\n"+
+      login.replace("ROLE_PLACEHOLDER","${{ vars."+roleVar+" }}");
+  }
+
+  // The plan file is written and consumed inside one job, so it never becomes a
+  // workflow artifact. A saved plan holds resolved values in cleartext.
+  function runSteps(envExpr,actionExpr,stackExpr){
+    return "      - name: Format\n        run: terraform fmt -check -recursive\n\n"+
+    "      - name: Init, validate, plan"+(actionExpr?", apply":"")+"\n"+
+    "        env:\n          ENVIRONMENT: "+envExpr+"\n"+
+    (actionExpr?"          ACTION: "+actionExpr+"\n":"          ACTION: plan\n")+
+    "          STACK: "+(stackExpr||"all")+"\n"+
+    "        run: |\n"+
+    "          set -euo pipefail\n"+
+    "          STACKS=\"00-account 10-workspace 20-workspace-config\"\n"+
+    "          if [ \"$STACK\" != \"all\" ]; then STACKS=\"$STACK\"; fi\n"+
+    "          for S in $STACKS; do\n"+
+    "            echo \"::group::$S ($ACTION, $ENVIRONMENT)\"\n"+
+    "            terraform -chdir=stacks/$S init -input=false \\\n"+
+    "              -backend-config=../../envs/$ENVIRONMENT/$S.backend.hcl\n"+
+    "            terraform -chdir=stacks/$S validate\n"+
+    "            terraform -chdir=stacks/$S plan -input=false -out=tfplan \\\n"+
+    "              -var-file=../../envs/$ENVIRONMENT/terraform.tfvars\n"+
+    "            if [ \"$ACTION\" = \"apply\" ]; then\n"+
+    "              terraform -chdir=stacks/$S apply -input=false -auto-approve tfplan\n"+
+    "            fi\n"+
+    "            rm -f stacks/$S/tfplan\n"+
+    "            echo \"::endgroup::\"\n"+
+    "          done\n";
+  }
+
+  var setup="      - uses: actions/checkout@v4\n\n"+
+    "      - uses: hashicorp/setup-terraform@v3\n        with:\n          terraform_version: 1.9.8\n          terraform_wrapper: false\n\n";
+  var dbxEnv="    env:\n      DATABRICKS_AUTH_TYPE: "+authType()+"\n"+
+    "      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}\n"+
+    "      DATABRICKS_ACCOUNT_ID: ${{ vars.DATABRICKS_ACCOUNT_ID }}\n";
+  var planRole=S.cloud==="aws"?"AWS_PLAN_ROLE_ARN":S.cloud==="azure"?"ARM_CLIENT_ID":"GCP_SERVICE_ACCOUNT";
+  var applyRole=S.cloud==="aws"?"AWS_APPLY_ROLE_ARN":S.cloud==="azure"?"ARM_CLIENT_ID":"GCP_SERVICE_ACCOUNT";
+
+  var w="name: terraform\n\non:\n";
+  w+="  # Applies are deliberate: pick the environment and the action by hand.\n";
+  w+="  workflow_dispatch:\n    inputs:\n";
+  w+="      environment:\n        description: Target environment\n        type: choice\n        required: true\n        options:\n";
+  S.envs.forEach(function(en){w+="          - "+en+"\n";});
+  w+="      action:\n        description: plan only, or plan then apply\n        type: choice\n        required: true\n        default: plan\n        options:\n          - plan\n          - apply\n";
+  w+="      stack:\n        description: One stack, or all three in order\n        type: choice\n        required: true\n        default: all\n        options:\n          - all\n          - 00-account\n          - 10-workspace\n          - 20-workspace-config\n";
+  w+="\n  # Pull requests plan only, with the read-only identity.\n  pull_request:\n";
+  if(S.drift)w+="\n  schedule:\n    - cron: \"41 6 * * 1-5\"\n";
+  w+="\npermissions:\n  id-token: write\n  contents: read\n  pull-requests: write\n\n";
+  w+="# Never cancel in flight: a cancelled apply strands the state lock.\nconcurrency:\n  group: terraform-${{ github.event.inputs.environment || github.ref }}\n  cancel-in-progress: false\n\njobs:\n";
+
+  /* dispatch job — carries the environment, so the OIDC token carries the
+     environment claim the apply role is scoped to */
+  w+="  run:\n    if: github.event_name == 'workflow_dispatch'\n    name: ${{ inputs.action }} ${{ inputs.environment }}\n";
+  w+="    runs-on: ubuntu-latest\n    environment: ${{ inputs.environment }}\n"+dbxEnv+"    steps:\n"+setup+loginStep(applyRole)+"\n"+
+     runSteps("${{ inputs.environment }}","${{ inputs.action }}","${{ inputs.stack }}")+"\n";
+
+  /* pull request job — plan only, read-only identity */
+  w+="  plan:\n    if: github.event_name == 'pull_request'\n    name: plan "+e0+"\n";
+  w+="    runs-on: ubuntu-latest\n"+dbxEnv+"    steps:\n"+setup+loginStep(planRole)+"\n"+
+     runSteps("\""+e0+"\"",null,"all")+"\n";
 
   if(S.drift){
-    F[".github/workflows/drift.yml"]=
-"name: drift\n\non:\n  schedule:\n    - cron: \"17 6 * * 1-5\"\n  workflow_dispatch:\n\npermissions:\n  id-token: write\n  contents: read\n  issues: write\n\njobs:\n  detect:\n    runs-on: ubuntu-latest\n    environment: "+e0+"\n    steps:\n      - uses: actions/checkout@v4\n"+login+
-"      - uses: hashicorp/setup-terraform@v3\n        with:\n          terraform_version: 1.9.8\n\n      - name: Init\n        working-directory: stacks/10-workspace\n        run: terraform init -backend-config=../../envs/"+e0+"/backend.hcl\n\n      # -detailed-exitcode: 0 no changes, 1 error, 2 drift.\n      - name: Detect\n        working-directory: stacks/10-workspace\n        run: terraform plan -detailed-exitcode -var-file=../../envs/"+e0+"/terraform.tfvars\n";
+    w+="  drift:\n    if: github.event_name == 'schedule'\n    name: drift "+e0+"\n";
+    w+="    runs-on: ubuntu-latest\n";
+    w+="    # Scheduled runs carry a ref subject, not a pull_request one, so this\n    # job targets the environment to get a subject the role trusts.\n";
+    w+="    environment: "+e0+"\n"+dbxEnv+"    steps:\n"+setup+loginStep(applyRole)+"\n";
+    w+="      - name: Detect drift\n        run: |\n          set -euo pipefail\n"+
+       "          terraform -chdir=stacks/10-workspace init -input=false \\\n"+
+       "            -backend-config=../../envs/"+e0+"/10-workspace.backend.hcl\n"+
+       "          # -detailed-exitcode: 0 no changes, 1 error, 2 drift.\n"+
+       "          terraform -chdir=stacks/10-workspace plan -detailed-exitcode -input=false \\\n"+
+       "            -var-file=../../envs/"+e0+"/terraform.tfvars\n";
   }
+  F[".github/workflows/terraform.yml"]=w;
+
   return F;
 }
 
