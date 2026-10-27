@@ -400,6 +400,373 @@ function commonVars(extra){
   return v+(extra||"");
 }
 
+function seedScript(){
+  var L=[],e=S.envs,bucket=squash(S.org+S.proj)+"-tfstate";
+  if(S.cloud==="aws"){
+    L.push("#!/usr/bin/env bash");
+    L.push("#");
+    L.push("# BricksWork seed. Run this once, in AWS CloudShell.");
+    L.push("#");
+    L.push("# It creates the only things Terraform cannot create for itself: the GitHub");
+    L.push("# OIDC trust, the roles CI assumes, and the bucket their state lives in.");
+    L.push("# Everything else in this repo is Terraform, run by GitHub Actions.");
+    L.push("#");
+    L.push("# CloudShell already has the AWS CLI and your console identity, so there are");
+    L.push("# no credentials to configure and nothing to install.");
+    L.push("#");
+    L.push("#   export GITHUB_REPO=your-org/your-repo");
+    L.push("#   bash seed.sh");
+    L.push("#");
+    L.push("# Safe to re-run: every step checks before it creates.");
+    L.push("");
+    L.push("set -euo pipefail");
+    L.push("");
+    L.push('GITHUB_REPO="${GITHUB_REPO:?set GITHUB_REPO to owner/repo before running}"');
+    L.push('REGION="'+S.region+'"');
+    L.push('STATE_BUCKET="'+bucket+'"');
+    L.push('ENVIRONMENTS=('+e.join(" ")+")");
+    L.push("");
+    L.push('ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"');
+    L.push('echo "Seeding AWS account ${ACCOUNT_ID} in ${REGION} for ${GITHUB_REPO}"');
+    L.push("");
+    L.push("# ---------------------------------------------------------------- state bucket");
+    L.push('if aws s3api head-bucket --bucket "$STATE_BUCKET" 2>/dev/null; then');
+    L.push('  echo "  bucket ${STATE_BUCKET} already exists"');
+    L.push("else");
+    L.push('  if [ "$REGION" = "us-east-1" ]; then');
+    L.push('    aws s3api create-bucket --bucket "$STATE_BUCKET" --region "$REGION" >/dev/null');
+    L.push("  else");
+    L.push('    aws s3api create-bucket --bucket "$STATE_BUCKET" --region "$REGION" \\');
+    L.push('      --create-bucket-configuration LocationConstraint="$REGION" >/dev/null');
+    L.push("  fi");
+    L.push('  echo "  created bucket ${STATE_BUCKET}"');
+    L.push("fi");
+    L.push("");
+    L.push('aws s3api put-bucket-versioning --bucket "$STATE_BUCKET" \\');
+    L.push("  --versioning-configuration Status=Enabled");
+    L.push('aws s3api put-bucket-encryption --bucket "$STATE_BUCKET" \\');
+    L.push("  --server-side-encryption-configuration \\");
+    L.push("  '{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}'");
+    L.push('aws s3api put-public-access-block --bucket "$STATE_BUCKET" \\');
+    L.push("  --public-access-block-configuration \\");
+    L.push("  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true");
+    L.push("");
+    L.push("# --------------------------------------------------------------- OIDC provider");
+    L.push("# One per account. If a landing zone already made it, this step is skipped.");
+    L.push('OIDC_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"');
+    L.push('if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "$OIDC_ARN" >/dev/null 2>&1; then');
+    L.push('  echo "  OIDC provider already present"');
+    L.push("else");
+    L.push("  aws iam create-open-id-connect-provider \\");
+    L.push("    --url https://token.actions.githubusercontent.com \\");
+    L.push("    --client-id-list sts.amazonaws.com \\");
+    L.push("    --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1 >/dev/null");
+    L.push('  echo "  created OIDC provider"');
+    L.push("fi");
+    L.push("");
+    L.push("# ------------------------------------------------------------------- helpers");
+    L.push("upsert_role () {  # $1 role name, $2 trust policy json");
+    L.push('  if aws iam get-role --role-name "$1" >/dev/null 2>&1; then');
+    L.push('    aws iam update-assume-role-policy --role-name "$1" --policy-document "$2"');
+    L.push('    echo "  updated trust on $1"');
+    L.push("  else");
+    L.push('    aws iam create-role --role-name "$1" --assume-role-policy-document "$2" \\');
+    L.push('      --description "GitHub Actions, ${GITHUB_REPO}" >/dev/null');
+    L.push('    echo "  created role $1"');
+    L.push("  fi");
+    L.push("}");
+    L.push("");
+    L.push("trust_for () {  # $1 the sub claim to allow");
+    L.push("  cat <<JSON");
+    L.push("{");
+    L.push('  "Version": "2012-10-17",');
+    L.push('  "Statement": [{');
+    L.push('    "Effect": "Allow",');
+    L.push('    "Principal": { "Federated": "${OIDC_ARN}" },');
+    L.push('    "Action": "sts:AssumeRoleWithWebIdentity",');
+    L.push('    "Condition": {');
+    L.push('      "StringEquals": {');
+    L.push('        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",');
+    L.push('        "token.actions.githubusercontent.com:sub": "$1"');
+    L.push("      }");
+    L.push("    }");
+    L.push("  }]");
+    L.push("}");
+    L.push("JSON");
+    L.push("}");
+    L.push("");
+    L.push("# ----------------------------------------------------------------- plan role");
+    L.push("# Read-only, and trusted on pull requests. Plan reads state, so this must never");
+    L.push("# be the apply role: a PR from anyone who can open one would read every secret");
+    L.push("# the state file holds.");
+    L.push('PLAN_ROLE="gha-plan-'+S.org+"-"+S.proj+'"');
+    L.push('upsert_role "$PLAN_ROLE" "$(trust_for "repo:${GITHUB_REPO}:pull_request")"');
+    L.push('aws iam attach-role-policy --role-name "$PLAN_ROLE" \\');
+    L.push("  --policy-arn arn:aws:iam::aws:policy/ReadOnlyAccess");
+    L.push("");
+    L.push("# Plan still takes a state lock, so it writes the lock object and nothing else.");
+    L.push('aws iam put-role-policy --role-name "$PLAN_ROLE" --policy-name tfstate \\');
+    L.push('  --policy-document "$(cat <<JSON');
+    L.push("{");
+    L.push('  "Version": "2012-10-17",');
+    L.push('  "Statement": [');
+    L.push('    { "Effect": "Allow", "Action": ["s3:ListBucket","s3:GetBucketLocation"],');
+    L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}" },');
+    L.push('    { "Effect": "Allow", "Action": ["s3:GetObject"],');
+    L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}/*" },');
+    L.push('    { "Effect": "Allow", "Action": ["s3:PutObject","s3:DeleteObject"],');
+    L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}/*.tflock" }');
+    L.push("  ]");
+    L.push("}");
+    L.push('JSON');
+    L.push('  )"');
+    L.push("");
+    L.push("# --------------------------------------------------------------- apply roles");
+    L.push("# One per environment, trusted only on that GitHub Environment. The environment");
+    L.push("# claim appears in the token only when the job targets it, which is what makes");
+    L.push("# the protection rules on that environment meaningful.");
+    L.push('for ENV in "${ENVIRONMENTS[@]}"; do');
+    L.push('  ROLE="gha-apply-'+S.org+"-"+S.proj+'-${ENV}"');
+    L.push('  upsert_role "$ROLE" "$(trust_for "repo:${GITHUB_REPO}:environment:${ENV}")"');
+    L.push("");
+    L.push("  # Scoped to the services this repo uses. Tighten with resource ARNs once your");
+    L.push("  # naming is settled; this is a starting point, not least privilege.");
+    L.push('  aws iam put-role-policy --role-name "$ROLE" --policy-name terraform \\');
+    L.push('    --policy-document "$(cat <<JSON');
+    L.push("{");
+    L.push('  "Version": "2012-10-17",');
+    L.push('  "Statement": [');
+    L.push('    { "Effect": "Allow", "Action": ["s3:ListBucket","s3:GetBucketLocation"],');
+    L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}" },');
+    L.push('    { "Effect": "Allow", "Action": ["s3:GetObject","s3:PutObject","s3:DeleteObject"],');
+    L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}/*" },');
+    L.push('    { "Effect": "Allow",');
+    L.push('      "Action": ["ec2:*Vpc*","ec2:*Subnet*","ec2:*Route*","ec2:*Gateway*",');
+    L.push('                 "ec2:*SecurityGroup*","ec2:*Address*","ec2:*NetworkAcl*",');
+    L.push('                 "ec2:*VpcEndpoint*","ec2:*Tags","ec2:Describe*"],');
+    L.push('      "Resource": "*" },');
+    L.push('    { "Effect": "Allow",');
+    L.push('      "Action": ["s3:CreateBucket","s3:Get*","s3:List*","s3:Put*","s3:Delete*"],');
+    L.push('      "Resource": "*" },');
+    L.push('    { "Effect": "Allow",');
+    L.push('      "Action": ["iam:CreateRole","iam:DeleteRole","iam:GetRole","iam:UpdateRole",');
+    L.push('                 "iam:PassRole","iam:TagRole","iam:ListRolePolicies",');
+    L.push('                 "iam:PutRolePolicy","iam:GetRolePolicy","iam:DeleteRolePolicy",');
+    L.push('                 "iam:AttachRolePolicy","iam:DetachRolePolicy",');
+    L.push('                 "iam:ListAttachedRolePolicies"],');
+    L.push('      "Resource": "*" }');
+    if(S.cmk){
+      L.push("    ,");
+      L.push('    { "Effect": "Allow",');
+      L.push('      "Action": ["kms:CreateKey","kms:CreateAlias","kms:DeleteAlias","kms:DescribeKey",');
+      L.push('                 "kms:ScheduleKeyDeletion","kms:TagResource","kms:PutKeyPolicy",');
+      L.push('                 "kms:GetKeyPolicy","kms:EnableKeyRotation","kms:ListAliases"],');
+      L.push('      "Resource": "*" }');
+    }
+    L.push("  ]");
+    L.push("}");
+    L.push('JSON');
+    L.push('    )"');
+    L.push("done");
+    L.push("");
+    L.push("# ------------------------------------------------------------------- summary");
+    L.push('cat <<SUMMARY');
+    L.push("");
+    L.push("Done. Set these as repository VARIABLES (Settings > Secrets and variables >");
+    L.push("Actions > Variables). None of them is a secret.");
+    L.push("");
+    L.push("  AWS_REGION            ${REGION}");
+    L.push("  AWS_PLAN_ROLE_ARN     arn:aws:iam::${ACCOUNT_ID}:role/${PLAN_ROLE}");
+    e.forEach(function(en){
+      L.push("  AWS_APPLY_ROLE_ARN    arn:aws:iam::${ACCOUNT_ID}:role/gha-apply-"+S.org+"-"+S.proj+"-"+en+"   ("+en+")");
+    });
+    L.push("  TF_STATE_BUCKET       ${STATE_BUCKET}");
+    L.push("");
+    L.push("Still to do, outside AWS:");
+    L.push("  - Create the Databricks service principal and its federation policy.");
+    L.push("  - Set DATABRICKS_ACCOUNT_ID and DATABRICKS_CLIENT_ID as repo variables.");
+    L.push("  - Create a GitHub Environment named for each of: "+e.join(", "));
+    L.push("SUMMARY");
+  } else if(S.cloud==="azure"){
+    L.push("#!/usr/bin/env bash");
+    L.push("#");
+    L.push("# BricksWork seed. Run this once, in Azure Cloud Shell (bash).");
+    L.push("#");
+    L.push("# Creates the app registrations GitHub Actions federates into, the storage");
+    L.push("# account holding Terraform state, and nothing else. Everything after this");
+    L.push("# is Terraform run by GitHub Actions.");
+    L.push("#");
+    L.push("#   export GITHUB_REPO=your-org/your-repo");
+    L.push("#   bash seed.sh");
+    L.push("");
+    L.push("set -euo pipefail");
+    L.push("");
+    L.push('GITHUB_REPO="${GITHUB_REPO:?set GITHUB_REPO to owner/repo before running}"');
+    L.push('REGION="'+S.region+'"');
+    L.push('RG="'+nm("rg","shared")+'-tfstate"');
+    L.push('SA="'+squash(S.org+"tfstate")+'"');
+    L.push('ENVIRONMENTS=('+e.join(" ")+")");
+    L.push("");
+    L.push('SUB_ID="$(az account show --query id -o tsv)"');
+    L.push('TENANT_ID="$(az account show --query tenantId -o tsv)"');
+    L.push('echo "Seeding subscription ${SUB_ID}"');
+    L.push("");
+    L.push("# ----------------------------------------------------------------- state store");
+    L.push('az group create --name "$RG" --location "$REGION" --output none');
+    L.push('az storage account create --name "$SA" --resource-group "$RG" \\');
+    L.push('  --location "$REGION" --sku Standard_GRS --min-tls-version TLS1_2 \\');
+    L.push("  --allow-blob-public-access false --output none");
+    L.push('az storage container create --name tfstate --account-name "$SA" \\');
+    L.push("  --auth-mode login --output none");
+    L.push("");
+    L.push("# ------------------------------------------------------------- app registrations");
+    L.push("upsert_app () {  # $1 display name -> echoes appId");
+    L.push('  local id');
+    L.push('  id="$(az ad app list --display-name "$1" --query "[0].appId" -o tsv)"');
+    L.push('  if [ -z "$id" ]; then');
+    L.push('    id="$(az ad app create --display-name "$1" --query appId -o tsv)"');
+    L.push('    az ad sp create --id "$id" --output none');
+    L.push("  fi");
+    L.push('  echo "$id"');
+    L.push("}");
+    L.push("");
+    L.push("federate () {  # $1 appId, $2 credential name, $3 subject");
+    L.push('  az ad app federated-credential create --id "$1" --parameters "{');
+    L.push('    \\"name\\": \\"$2\\",');
+    L.push('    \\"issuer\\": \\"https://token.actions.githubusercontent.com\\",');
+    L.push('    \\"subject\\": \\"$3\\",');
+    L.push('    \\"audiences\\": [\\"api://AzureADTokenExchange\\"]');
+    L.push('  }" --output none 2>/dev/null || echo "  credential $2 already present"');
+    L.push("}");
+    L.push("");
+    L.push('PLAN_APP="$(upsert_app "gha-plan-'+S.org+"-"+S.proj+'")"');
+    L.push('federate "$PLAN_APP" "pull-request" "repo:${GITHUB_REPO}:pull_request"');
+    L.push('az role assignment create --assignee "$PLAN_APP" --role Reader \\');
+    L.push('  --scope "/subscriptions/${SUB_ID}" --output none');
+    L.push("");
+    L.push('APPLY_APP="$(upsert_app "gha-apply-'+S.org+"-"+S.proj+'")"');
+    L.push('for ENV in "${ENVIRONMENTS[@]}"; do');
+    L.push('  federate "$APPLY_APP" "env-${ENV}" "repo:${GITHUB_REPO}:environment:${ENV}"');
+    L.push("done");
+    L.push("");
+    L.push("# Contributor creates resources; User Access Administrator is needed because the");
+    L.push("# access connector gets a role assignment on storage.");
+    L.push('for ROLE in Contributor "User Access Administrator"; do');
+    L.push('  az role assignment create --assignee "$APPLY_APP" --role "$ROLE" \\');
+    L.push('    --scope "/subscriptions/${SUB_ID}" --output none');
+    L.push("done");
+    L.push("");
+    L.push('cat <<SUMMARY');
+    L.push("");
+    L.push("Done. Set these as repository VARIABLES. None is a secret.");
+    L.push("");
+    L.push("  ARM_TENANT_ID        ${TENANT_ID}");
+    L.push("  ARM_SUBSCRIPTION_ID  ${SUB_ID}");
+    L.push("  ARM_CLIENT_ID        ${APPLY_APP}    (apply jobs)");
+    L.push("  ARM_PLAN_CLIENT_ID   ${PLAN_APP}    (pull-request plans)");
+    L.push("  TF_STATE_ACCOUNT     ${SA}");
+    L.push("");
+    L.push("Still to do: the Databricks service principal and federation policy, then");
+    L.push("DATABRICKS_ACCOUNT_ID and DATABRICKS_CLIENT_ID, and a GitHub Environment");
+    L.push("named for each of: "+e.join(", "));
+    L.push("SUMMARY");
+  } else {
+    L.push("#!/usr/bin/env bash");
+    L.push("#");
+    L.push("# BricksWork seed. Run this once, in Google Cloud Shell.");
+    L.push("#");
+    L.push("#   export GITHUB_REPO=your-org/your-repo");
+    L.push("#   export PROJECT_ID=your-project");
+    L.push("#   bash seed.sh");
+    L.push("");
+    L.push("set -euo pipefail");
+    L.push("");
+    L.push('GITHUB_REPO="${GITHUB_REPO:?set GITHUB_REPO to owner/repo}"');
+    L.push('PROJECT_ID="${PROJECT_ID:?set PROJECT_ID}"');
+    L.push('REGION="'+S.region+'"');
+    L.push('BUCKET="'+bucket+'"');
+    L.push("");
+    L.push('PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format=\'value(projectNumber)\')"');
+    L.push("");
+    L.push("gcloud services enable iamcredentials.googleapis.com sts.googleapis.com \\");
+    L.push('  --project "$PROJECT_ID"');
+    L.push("");
+    L.push("# ----------------------------------------------------------------- state bucket");
+    L.push('gcloud storage buckets create "gs://${BUCKET}" --project "$PROJECT_ID" \\');
+    L.push('  --location "$REGION" --uniform-bucket-level-access 2>/dev/null \\');
+    L.push('  || echo "  bucket already exists"');
+    L.push('gcloud storage buckets update "gs://${BUCKET}" --versioning');
+    L.push("");
+    L.push("# ------------------------------------------------------- workload identity pool");
+    L.push('gcloud iam workload-identity-pools create github-pool --project "$PROJECT_ID" \\');
+    L.push('  --location global --display-name "GitHub Actions" 2>/dev/null \\');
+    L.push('  || echo "  pool already exists"');
+    L.push("");
+    L.push("# The attribute-condition is not optional. Without it, any repository on GitHub");
+    L.push("# can mint tokens accepted by this pool.");
+    L.push("gcloud iam workload-identity-pools providers create-oidc github-provider \\");
+    L.push('  --project "$PROJECT_ID" --location global --workload-identity-pool github-pool \\');
+    L.push('  --issuer-uri "https://token.actions.githubusercontent.com" \\');
+    L.push("  --attribute-mapping 'google.subject=assertion.sub,attribute.repository=assertion.repository' \\");
+    L.push('  --attribute-condition "assertion.repository == \'${GITHUB_REPO}\'" 2>/dev/null \\');
+    L.push('  || echo "  provider already exists"');
+    L.push("");
+    L.push("# ------------------------------------------------------------- service accounts");
+    L.push('POOL="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-pool"');
+    L.push("");
+    L.push("bind_sa () {  # $1 account id, $2 role, $3 sub");
+    L.push('  gcloud iam service-accounts create "$1" --project "$PROJECT_ID" 2>/dev/null || true');
+    L.push('  local SA="$1@${PROJECT_ID}.iam.gserviceaccount.com"');
+    L.push('  gcloud projects add-iam-policy-binding "$PROJECT_ID" \\');
+    L.push('    --member "serviceAccount:${SA}" --role "$2" --condition None >/dev/null');
+    L.push('  gcloud iam service-accounts add-iam-policy-binding "$SA" --project "$PROJECT_ID" \\');
+    L.push('    --role roles/iam.workloadIdentityUser \\');
+    L.push('    --member "principalSet://iam.googleapis.com/${POOL}/subject/$3" >/dev/null');
+    L.push("}");
+    L.push("");
+    L.push('bind_sa gha-plan  roles/viewer "repo:${GITHUB_REPO}:pull_request"');
+    e.forEach(function(en){
+      L.push('bind_sa gha-apply-'+en+' roles/editor "repo:${GITHUB_REPO}:environment:'+en+'"');
+    });
+    L.push("");
+    L.push('cat <<SUMMARY');
+    L.push("");
+    L.push("Done. Set these as repository VARIABLES. None is a secret.");
+    L.push("");
+    L.push("  GCP_PROJECT_ID     ${PROJECT_ID}");
+    L.push("  GCP_WIF_PROVIDER   ${POOL}/providers/github-provider");
+    L.push("  GCP_SERVICE_ACCOUNT  gha-apply-<env>@${PROJECT_ID}.iam.gserviceaccount.com");
+    L.push("  TF_STATE_BUCKET    ${BUCKET}");
+    L.push("");
+    L.push("Note: serverless private endpoint rules are not available in the Databricks");
+    L.push("Terraform provider on GCP. Create them in the account console after apply.");
+    L.push("SUMMARY");
+  }
+  return L.join("\n")+"\n";
+}
+
+function seedReadme(){
+  var shell=S.cloud==="aws"?"AWS CloudShell":S.cloud==="azure"?"Azure Cloud Shell":"Google Cloud Shell";
+  var how=S.cloud==="aws"?"Open the AWS console, pick your target account and region, and click the\nCloudShell icon in the top bar.":
+          S.cloud==="azure"?"Open the Azure portal and click the Cloud Shell icon in the top bar. Choose\nBash if prompted.":
+          "Open the Google Cloud console, select your project, and click the Cloud Shell\nicon in the top bar.";
+  var r="# Seed\n\nRun once, before anything else. Not Terraform.\n\n";
+  r+="## Why this is not Terraform\n\n";
+  r+="This creates the identity GitHub Actions assumes and the bucket Terraform keeps\nits state in. Terraform cannot create either, because it would need that identity\nto authenticate and that bucket to store state — the things being created. Any\nTerraform here would need its own local state file, which someone then has to\nlook after. A handful of CLI calls avoids all of it.\n\n";
+  r+="It is the only step a human performs, and after it no one needs cloud\ncredentials on a laptop again.\n\n";
+  r+="## Running it\n\n"+how+"\n\nThe shell already has the CLI and your console identity, so there is nothing to\ninstall and no credentials to configure.\n\n";
+  r+="```bash\nexport GITHUB_REPO=your-org/your-repo\n"+(S.cloud==="gcp"?"export PROJECT_ID=your-project\n":"")+"bash seed.sh\n```\n\n";
+  r+="Upload `seed.sh` with the shell's upload button, or paste it into a new file.\n\nThe script is idempotent: every step checks before it creates, so re-running it\nafter a change is safe.\n\n";
+  r+="## What it creates\n\n";
+  if(S.cloud==="aws")r+="- An S3 bucket for Terraform state, versioned and encrypted\n- The GitHub OIDC identity provider, if the account does not already have one\n- `gha-plan-*`, read-only, trusted on pull requests\n- `gha-apply-*`, one per environment, trusted only on that GitHub Environment\n\n";
+  if(S.cloud==="azure")r+="- A resource group and storage account for Terraform state\n- A read-only app registration federated on pull requests\n- An app registration for applies, federated once per environment\n- Role assignments for both\n\n";
+  if(S.cloud==="gcp")r+="- A GCS bucket for Terraform state, versioned\n- A workload identity pool and provider, scoped to this repository\n- A viewer service account for plans and an editor one per environment\n\n";
+  r+="## Two identities, not one\n\nThe plan role is read-only and trusted on `pull_request`. The apply roles are\ntrusted only on `environment:<name>`.\n\nThis matters more than it looks. `terraform plan` reads state, and state holds\nevery value your resources were created with. A single role trusted on\n`repo:owner/name:*` would let anyone who can open a pull request read all of it.\n\n";
+  r+="## After it finishes\n\nThe script prints the repository variables to set. They are variables, not\nsecrets — there is no long-lived credential anywhere in this setup.\n\nThen create a GitHub Environment named for each of: "+S.envs.join(", ")+
+     ". Add required reviewers to the production one; that is what the environment-scoped\ntrust is protecting.\n";
+  return r;
+}
+
 function build(){
   var F={},e0=S.envs[0]||"dev",p=PROV[S.cloud],srv=(S.mode!=="classic"),cls=(S.mode!=="serverless");
 
@@ -407,7 +774,7 @@ function build(){
   var r="# "+S.org+"-"+S.proj+" · Databricks on "+S.cloud.toUpperCase()+"\n\n";
   r+="Generated by BricksWork. Terraform "+(S.cloud==="aws"?"AWS":S.cloud==="azure"?"Azure":"GCP")+
      ", "+(S.mode==="both"?"classic and serverless":S.mode)+" compute, "+S.envs.length+" environment(s).\n\n";
-  r+="## Apply order\n\n```\nbootstrap/            run once, locally, then migrate its state\nstacks/00-account/    regional, shared across workspaces\nstacks/10-workspace/  per workspace\nstacks/20-workspace-config/\n```\n\n";
+  r+="## Apply order\n\n```\nbootstrap/seed.sh     run once by a human, in the cloud shell. Not Terraform.\nstacks/00-account/    regional, shared across workspaces\nstacks/10-workspace/  per workspace\nstacks/20-workspace-config/\n```\n\nEverything below the seed runs in GitHub Actions. No one needs cloud\ncredentials on a laptop.\n\n";
   r+="## GitHub configuration\n\nThis repo uses OIDC throughout. **There are no repository secrets.**\n\n### Repository variables\n\n| Variable | Value |\n|---|---|\n";
   r+="| `DATABRICKS_ACCOUNT_ID` | Your Databricks account UUID |\n| `DATABRICKS_CLIENT_ID` | Service principal application ID |\n";
   if(S.cloud==="aws"){r+="| `AWS_PLAN_ROLE_ARN` | Read-only role, trusted on pull_request |\n| `AWS_APPLY_ROLE_ARN` | Write role, trusted on environment only |\n| `AWS_REGION` | `"+S.region+"` |\n";}
@@ -425,38 +792,12 @@ function build(){
   /* ---- gitignore ---- */
   F[".gitignore"]=".terraform/\n*.tfstate\n*.tfstate.*\n*.tfplan\ncrash.log\n.terraform.tfstate.lock.info\noverride.tf\noverride.tf.json\n*_override.tf\n.DS_Store\n";
 
-  /* ---- bootstrap ---- */
-  var b=hdr("bootstrap — run locally once, then: terraform init -migrate-state");
-  b+=tfBlock(S.cloud==="azure"?"azuread":null)+"\n";
-  if(S.cloud==="aws"){
-    b+='provider "aws" {\n  region = var.region\n}\n\n';
-    b+='resource "aws_s3_bucket" "state" {\n  bucket = "'+squash(S.org+S.proj)+'-tfstate"\n}\n\n';
-    b+='resource "aws_s3_bucket_versioning" "state" {\n  bucket = aws_s3_bucket.state.id\n  versioning_configuration {\n    status = "Enabled"\n  }\n}\n\n';
-    b+='resource "aws_s3_bucket_server_side_encryption_configuration" "state" {\n  bucket = aws_s3_bucket.state.id\n  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm = "AES256"\n    }\n  }\n}\n\n';
-    b+='# GitHub OIDC provider and the two identities.\n';
-    b+='resource "aws_iam_openid_connect_provider" "github" {\n  url             = "https://token.actions.githubusercontent.com"\n  client_id_list  = ["sts.amazonaws.com"]\n  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]\n}\n\n';
-    b+='# Plan: read-only, any pull request.\nresource "aws_iam_role" "plan" {\n  name = "'+nm("gha-plan",e0)+'"\n  assume_role_policy = jsonencode({\n    Version = "2012-10-17"\n    Statement = [{\n      Effect    = "Allow"\n      Principal = { Federated = aws_iam_openid_connect_provider.github.arn }\n      Action    = "sts:AssumeRoleWithWebIdentity"\n      Condition = {\n        StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }\n        StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:pull_request" }\n      }\n    }]\n  })\n}\n\n';
-    b+='# Apply: write, environment-scoped only. Never a wildcard subject.\nresource "aws_iam_role" "apply" {\n  for_each = toset(var.environments)\n  name     = "gha-apply-${each.key}"\n  assume_role_policy = jsonencode({\n    Version = "2012-10-17"\n    Statement = [{\n      Effect    = "Allow"\n      Principal = { Federated = aws_iam_openid_connect_provider.github.arn }\n      Action    = "sts:AssumeRoleWithWebIdentity"\n      Condition = {\n        StringEquals = {\n          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"\n          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:environment:${each.key}"\n        }\n      }\n    }]\n  })\n}\n';
-  } else if(S.cloud==="azure"){
-    b+='provider "azurerm" {\n  features {}\n}\n\n';
-    b+='resource "azurerm_resource_group" "tfstate" {\n  name     = "'+nm("rg",e0).replace(e0,"shared")+'-tfstate"\n  location = var.region\n}\n\n';
-    b+='resource "azurerm_storage_account" "tfstate" {\n  name                     = "'+squash(S.org+"tfstate")+'"\n  resource_group_name      = azurerm_resource_group.tfstate.name\n  location                 = azurerm_resource_group.tfstate.location\n  account_tier             = "Standard"\n  account_replication_type = "GRS"\n  min_tls_version          = "TLS1_2"\n\n  blob_properties {\n    versioning_enabled = true\n  }\n}\n\n';
-    b+='resource "azurerm_storage_container" "tfstate" {\n  name                  = "tfstate"\n  storage_account_id    = azurerm_storage_account.tfstate.id\n  container_access_type = "private"\n}\n\n';
-    b+='# Federated credentials. One per environment, plus one for pull-request plans.\nresource "azuread_application_federated_identity_credential" "apply" {\n  for_each       = toset(var.environments)\n  application_id = var.apply_app_object_id\n  display_name   = "gha-apply-${each.key}"\n  audiences      = ["api://AzureADTokenExchange"]\n  issuer         = "https://token.actions.githubusercontent.com"\n  subject        = "repo:${var.github_repo}:environment:${each.key}"\n}\n\n';
-    b+='resource "azuread_application_federated_identity_credential" "plan" {\n  application_id = var.plan_app_object_id\n  display_name   = "gha-plan"\n  audiences      = ["api://AzureADTokenExchange"]\n  issuer         = "https://token.actions.githubusercontent.com"\n  subject        = "repo:${var.github_repo}:pull_request"\n}\n';
-  } else {
-    b+='provider "google" {\n  project = var.project_id\n  region  = var.region\n}\n\n';
-    b+='resource "google_storage_bucket" "state" {\n  name                        = "'+squash(S.org+S.proj)+'-tfstate"\n  location                    = upper(var.region)\n  uniform_bucket_level_access = true\n  versioning {\n    enabled = true\n  }\n}\n\n';
-    b+='resource "google_iam_workload_identity_pool" "github" {\n  workload_identity_pool_id = "github-pool"\n  display_name              = "GitHub Actions"\n}\n\n';
-    b+='resource "google_iam_workload_identity_pool_provider" "github" {\n  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id\n  workload_identity_pool_provider_id = "github-provider"\n\n  attribute_mapping = {\n    "google.subject"       = "assertion.sub"\n    "attribute.repository" = "assertion.repository"\n  }\n\n  # Without this condition any GitHub repo on earth can mint tokens for this pool.\n  attribute_condition = "assertion.repository == \\"${var.github_repo}\\""\n\n  oidc {\n    issuer_uri = "https://token.actions.githubusercontent.com"\n  }\n}\n';
-  }
-  F["bootstrap/main.tf"]=b;
-  F["bootstrap/variables.tf"]=hdr("bootstrap variables")+
-    'variable "github_repo" {\n  description = "owner/repo, used to scope every OIDC trust condition"\n  type        = string\n}\n\n'+
-    'variable "region" {\n  type    = string\n  default = "'+S.region+'"\n}\n\n'+
-    'variable "environments" {\n  type    = list(string)\n  default = '+JSON.stringify(S.envs)+'\n}\n'+
-    (S.cloud==="azure"?'\nvariable "apply_app_object_id" {\n  description = "Object ID of the app registration used by apply jobs"\n  type        = string\n}\n\nvariable "plan_app_object_id" {\n  description = "Object ID of the read-only app registration used by PR plans"\n  type        = string\n}\n':"")+
-    (S.cloud==="gcp"?'\nvariable "project_id" {\n  type = string\n}\n':"");
+  /* ---- bootstrap: a seed script, not Terraform ----
+     This creates the identity Terraform later assumes and the bucket its state
+     lives in. Terraform cannot create either without already having them, and a
+     Terraform bootstrap just moves the problem to its own state file. */
+  F["bootstrap/seed.sh"]=seedScript();
+  F["bootstrap/README.md"]=seedReadme();
 
   /* ---- naming module ---- */
   F["modules/naming/main.tf"]=hdr("naming — single source of truth for every resource name")+
@@ -473,13 +814,14 @@ function build(){
   F["stacks/00-account/providers.tf"]=hdr("00-account providers")+providersAccount();
   var a=hdr("00-account — regional, shared across every workspace in this region");
   if(S.cloud==="aws"){
-    a+='data "databricks_aws_assume_role_policy" "this" {\n  external_id = var.databricks_account_id\n}\n\n';
-    a+='data "databricks_aws_crossaccount_policy" "this" {}\n\n';
+    a+='# These carry the provider alias like every other databricks block: the only\n# databricks provider configured here is aliased, so an unqualified block would\n# fall back to an empty default configuration and fail to authenticate.\n';
+    a+='data "databricks_aws_assume_role_policy" "this" {\n  provider    = databricks.account\n  external_id = var.databricks_account_id\n}\n\n';
+    a+='data "databricks_aws_crossaccount_policy" "this" {\n  provider = databricks.account\n}\n\n';
     a+='resource "aws_iam_role" "cross_account" {\n  name               = "'+nm("crossaccount","shared")+'"\n  assume_role_policy = data.databricks_aws_assume_role_policy.this.json\n}\n\n';
     a+='resource "aws_iam_role_policy" "cross_account" {\n  name   = "'+nm("crossaccount","shared")+'"\n  role   = aws_iam_role.cross_account.id\n  policy = data.databricks_aws_crossaccount_policy.this.json\n}\n\n';
     a+='resource "aws_s3_bucket" "root" {\n  bucket        = "'+nm("root","shared")+'"\n  force_destroy = false\n}\n\n';
     a+='resource "aws_s3_bucket_public_access_block" "root" {\n  bucket                  = aws_s3_bucket.root.id\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n}\n\n';
-    a+='data "databricks_aws_bucket_policy" "root" {\n  bucket = aws_s3_bucket.root.bucket\n}\n\n';
+    a+='data "databricks_aws_bucket_policy" "root" {\n  provider = databricks.account\n  bucket   = aws_s3_bucket.root.bucket\n}\n\n';
     a+='resource "aws_s3_bucket_policy" "root" {\n  bucket = aws_s3_bucket.root.id\n  policy = data.databricks_aws_bucket_policy.root.json\n}\n\n';
     a+='# IAM is eventually consistent. Without this the first apply usually fails with\n# MALFORMED_REQUEST on the credentials registration.\nresource "time_sleep" "iam" {\n  depends_on      = [aws_iam_role_policy.cross_account]\n  create_duration = "20s"\n}\n\n';
     a+='# Credentials and storage configs are shareable across workspaces. Networks are not.\n';
@@ -837,7 +1179,7 @@ document.getElementById("copyall").addEventListener("click",function(){
     if(dir)s+='mkdir -p "'+dir+'"\n';
     s+="cat > '"+p+"' <<'BRICKSWORK_EOF'\n"+FILES[p]+"BRICKSWORK_EOF\n\n";
   });
-  s+='echo "Repo written. Next: cd bootstrap && terraform init && terraform apply"\n';
+  s+='echo "Repo written. Next: read bootstrap/README.md and run seed.sh in the cloud shell."\n';
   copy(s,this,"Copied");
 });
 /* The button is always offered. Preferred route is the platform save; where the
@@ -867,7 +1209,7 @@ function doDownload(btn){
   Promise.all([zip.generateAsync({type:"blob"}),downloader()]).then(function(r){
     var blob=r[0],dl=r[1];
     if(dl)return dl.save({filename:root+".zip",data:blob}).then(function(){
-      note.textContent="Saved "+root+".zip. Start with bootstrap/, then stacks 00 → 10 → 20.";});
+      note.textContent="Saved "+root+".zip. Start with bootstrap/README.md, then stacks 00 → 10 → 20.";});
     saveViaAnchor(blob,root+".zip");
     note.textContent="If your browser blocked that save, use Copy as shell script — it writes every file from one paste.";
   }).catch(function(err){
