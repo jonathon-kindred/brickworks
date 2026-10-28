@@ -15,15 +15,15 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
-/* Layout: fixed config rail + live repo preview, stacking to one column on phones. */
+/* Layout: config rail on the left, file tree + code pane on the right. */
 :root{
   --bg:#F9F7F4; --surface:#FFFFFF; --surface-2:#F2F0EB; --sunken:#1B3139;
   --fg:#15282F; --fg-dim:#5E7178; --line:#DFDAD1; --line-soft:#ECE8E1;
   --accent:#FF3621; --accent-ink:#FFFFFF; --good:#00875A; --warn:#B45309; --bad:#C42127;
-  --code-fg:#E8E6E1; --code-dim:#8FA3AA; --code-key:#FF8A72; --code-str:#6FD3A8; --code-num:#8FC3F0;
+  --code-fg:#E8E6E1; --code-dim:#8FA3AA; --code-key:#FF8A72; --code-str:#6FD3A8;
   --font-ui:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
-  --r:10px; --spring:cubic-bezier(.32,.72,0,1);
+  --spring:cubic-bezier(.32,.72,0,1);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0D191E; --surface:#152831; --surface-2:#1C3741; --sunken:#0A1418;
@@ -38,53 +38,48 @@
   --code-fg:#E3E1DC; --code-dim:#78929B; color-scheme:dark;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
 
-/* ---------- chrome ---------- */
 .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line-soft)}
-.topbar-in{max-width:1320px;margin:0 auto;padding-block:11px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:14px}
+.topbar-in{max-width:1320px;margin:0 auto;padding-block:11px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:12px}
 .logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.022em;font-size:16px}
 .logo .sq{width:17px;height:17px;border-radius:4px;background:var(--accent);position:relative;flex:none}
 .logo .sq::after{content:"";position:absolute;inset:4px 4px auto auto;width:5px;height:5px;border-radius:1.5px;background:var(--accent-ink);opacity:.85}
 .topbar .sp{flex:1}
-.ghost{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-size:13px;font-weight:500;padding:7px 13px;border-radius:999px;cursor:pointer;transition:background .18s var(--spring),border-color .18s,transform .12s var(--spring)}
+.ghost{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit;font-size:13px;font-weight:500;padding:7px 13px;border-radius:999px;cursor:pointer;transition:background .18s var(--spring),transform .12s var(--spring)}
 .ghost:hover{background:var(--surface-2)}
 .ghost:active{transform:scale(.96)}
-.ghost:focus-visible,.seg button:focus-visible,.sw:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,.treerow:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ghost:focus-visible,.seg button:focus-visible,.sw:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible,.treerow:focus-visible,.cta:focus-visible,.mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-.wrap{max-width:1320px;margin:0 auto;padding-block:22px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.lede{max-width:62ch;margin-bottom:22px}
-.lede h1{font-size:clamp(26px,3.6vw,38px);line-height:1.1;letter-spacing:-.032em;margin:0 0 9px;text-wrap:balance;font-weight:700}
+.wrap{max-width:1320px;margin:0 auto;padding-block:22px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.lede{max-width:64ch;margin-bottom:22px}
+.lede h1{font-size:clamp(25px,3.4vw,36px);line-height:1.12;letter-spacing:-.032em;margin:0 0 9px;text-wrap:balance;font-weight:700}
 .lede p{margin:0;color:var(--fg-dim);font-size:15.5px}
 
-.grid{display:grid;grid-template-columns:minmax(0,370px) minmax(0,1fr);gap:20px;align-items:start}
+.grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:20px;align-items:start}
 @media (max-width:940px){.grid{grid-template-columns:minmax(0,1fr)}}
 
-/* ---------- panels ---------- */
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .rail{display:flex;flex-direction:column;gap:14px}
 .sec{padding:15px 16px;border-bottom:1px solid var(--line-soft)}
 .sec:last-child{border-bottom:0}
-.sec > h2{margin:0 0 11px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-dim)}
+.sec>h2{margin:0 0 11px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-dim)}
 .field{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
 .field:last-child{margin-bottom:0}
 .field label{font-size:12.5px;font-weight:500;color:var(--fg-dim)}
 .field input,.field select{font:inherit;font-size:14px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--fg);width:100%;min-width:0;transition:border-color .16s,background .16s}
 .field input:focus,.field select:focus{border-color:var(--accent);background:var(--surface)}
-.field .hint{font-size:11.5px;color:var(--fg-dim)}
+.hint{font-size:11.5px;color:var(--fg-dim);line-height:1.45}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
-/* ---------- segmented control (sliding pill) ---------- */
-.seg{position:relative;display:grid;background:var(--surface-2);border-radius:10px;padding:3px;gap:0}
-.seg::before{content:"";position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px)/var(--n));background:var(--surface);border-radius:7.5px;box-shadow:0 1px 3px rgba(0,0,0,.13),0 0 0 .5px rgba(0,0,0,.05);transform:translateX(calc(var(--i) * 100%));transition:transform .38s var(--spring)}
+.seg{position:relative;display:grid;background:var(--surface-2);border-radius:10px;padding:3px;grid-template-columns:repeat(3,1fr)}
+.seg::before{content:"";position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px)/3);background:var(--surface);border-radius:7.5px;box-shadow:0 1px 3px rgba(0,0,0,.13),0 0 0 .5px rgba(0,0,0,.05);transform:translateX(calc(var(--i) * 100%));transition:transform .38s var(--spring)}
 :root[data-theme="dark"] .seg::before,:root:not([data-theme="light"]) .seg::before{box-shadow:0 1px 3px rgba(0,0,0,.4)}
-.seg button{position:relative;z-index:1;appearance:none;background:none;border:0;font:inherit;font-size:13px;font-weight:500;color:var(--fg-dim);padding:7px 4px;border-radius:7.5px;cursor:pointer;transition:color .2s;min-width:0;white-space:nowrap}
+.seg button{position:relative;z-index:1;appearance:none;background:none;border:0;font:inherit;font-size:13px;font-weight:500;color:var(--fg-dim);padding:7px 4px;border-radius:7.5px;cursor:pointer;min-width:0;white-space:nowrap;transition:color .2s}
 .seg button[aria-selected="true"]{color:var(--fg);font-weight:700}
 
-/* ---------- iOS switch ---------- */
 .swrow{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
 .swrow:last-child{border-bottom:0;padding-bottom:0}
 .swrow:first-of-type{padding-top:0}
@@ -97,33 +92,26 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .sw[aria-checked="true"]::after{transform:translateX(19px)}
 .sw:active::after{width:30px}
 .sw[aria-checked="true"]:active::after{transform:translateX(15px)}
-.sw[disabled]{opacity:.4;cursor:not-allowed}
 
-/* ---------- chips ---------- */
 .chips{display:flex;flex-wrap:wrap;gap:7px}
 .chip{appearance:none;font:inherit;font-size:12.5px;font-weight:500;padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--fg-dim);cursor:pointer;transition:all .22s var(--spring)}
 .chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .chip:active{transform:scale(.95)}
 
-/* ---------- names validator ---------- */
-.names{display:flex;flex-direction:column;gap:0}
+.names{display:flex;flex-direction:column}
 .nrow{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--line-soft);font-size:12px}
 .nrow:last-child{border-bottom:0}
-.nrow .k{color:var(--fg-dim);flex:none;width:94px}
+.nrow .k{color:var(--fg-dim);flex:none;width:96px}
 .nrow .v{font-family:var(--font-mono);font-size:11.5px;flex:1;min-width:0;overflow-wrap:anywhere}
 .dot{width:7px;height:7px;border-radius:999px;flex:none;background:var(--good)}
 .dot.bad{background:var(--bad)}
-.dot.warn{background:var(--warn)}
 .nrow.is-bad .v{color:var(--bad)}
 .nmsg{font-size:11px;color:var(--bad);padding:2px 0 7px;border-bottom:1px solid var(--line-soft)}
 
-/* ---------- preview ---------- */
-/* The whole output panel sticks, bar included — a sticky pane with the actions
-   after it pushes them permanently below the fold. */
 .outpanel{position:sticky;top:calc(env(safe-area-inset-top,0px) + 62px)}
-.preview{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:0}
+.preview{display:grid;grid-template-columns:238px minmax(0,1fr);min-height:0}
 @media (max-width:940px){.outpanel{position:static}.preview{grid-template-columns:minmax(0,1fr)}}
-.tree{background:var(--surface-2);border-right:1px solid var(--line);padding:11px 0;max-height:min(50vh,500px);overflow:auto;min-width:0}
+.tree{background:var(--surface-2);border-right:1px solid var(--line);padding:11px 0;max-height:min(52vh,520px);overflow:auto;min-width:0}
 @media (max-width:940px){.tree{max-height:230px;border-right:0;border-bottom:1px solid var(--line)}}
 .treehead{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-dim);padding:0 14px 9px}
 .treerow{display:flex;align-items:center;gap:7px;width:100%;text-align:left;appearance:none;background:none;border:0;font:inherit;font-size:12.5px;font-family:var(--font-mono);color:var(--fg-dim);padding:3.5px 14px;cursor:pointer;white-space:nowrap}
@@ -138,42 +126,28 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .mini{appearance:none;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit;font-size:11.5px;font-weight:500;padding:4.5px 10px;border-radius:999px;cursor:pointer;flex:none;transition:transform .12s var(--spring),background .18s}
 .mini:active{transform:scale(.95)}
 .mini.ok{background:var(--good);border-color:var(--good);color:#fff}
-.code{background:var(--sunken);color:var(--code-fg);font-family:var(--font-mono);font-size:12px;line-height:1.65;padding:14px 16px;margin:0;overflow:auto;max-height:min(50vh,500px);min-width:0;tab-size:2}
+.code{background:var(--sunken);color:var(--code-fg);font-family:var(--font-mono);font-size:12px;line-height:1.65;padding:14px 16px;margin:0;overflow:auto;max-height:min(52vh,520px);min-width:0;tab-size:2}
 @media (max-width:940px){.code{max-height:380px}}
 .code .c{color:var(--code-dim)}
 .code .k{color:var(--code-key)}
 .code .s{color:var(--code-str)}
-.code .n{color:var(--code-num)}
 
 .bar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:13px 16px;border-top:1px solid var(--line);background:var(--surface)}
-.bar .stat{font-size:12.5px;color:var(--fg-dim);flex:1;min-width:140px}
+.bar .stat{font-size:12.5px;color:var(--fg-dim);flex:1;min-width:150px}
 .bar .stat b{color:var(--fg);font-variant-numeric:tabular-nums}
 .cta{appearance:none;border:0;background:var(--accent);color:var(--accent-ink);font:inherit;font-size:14px;font-weight:700;padding:10px 20px;border-radius:999px;cursor:pointer;transition:transform .14s var(--spring),filter .18s}
 .cta:hover{filter:brightness(1.07)}
 .cta:active{transform:scale(.965)}
 .cta[disabled]{opacity:.45;cursor:not-allowed}
 .cta.sm{font-size:13px;padding:7px 15px}
-.note{font-size:11.5px;color:var(--fg-dim);padding:0 16px 13px;background:var(--surface)}
+.note{font-size:11.5px;color:var(--fg-dim);padding:0 16px 13px;background:var(--surface);line-height:1.5}
 
-
-/* Primary tabs: underline rail, not pills — pills are already doing work inside
-   the configurator and a second set would compete. */
-.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tabs button{appearance:none;background:none;border:0;border-bottom:2px solid transparent;font:inherit;font-size:14.5px;font-weight:500;color:var(--fg-dim);padding:9px 15px 10px;cursor:pointer;white-space:nowrap;transition:color .2s,border-color .25s var(--spring)}
-.tabs button[aria-selected="true"]{color:var(--fg);font-weight:700;border-bottom-color:var(--accent)}
-.tabs button:hover{color:var(--fg)}
-.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.tabnote{font-size:12.5px;color:var(--fg-dim);margin:-8px 0 18px;max-width:70ch;line-height:1.5}
-.callout{font-size:11.5px;line-height:1.5;color:var(--fg-dim);background:var(--surface-2);border-left:2px solid var(--warn);padding:9px 11px;border-radius:0 7px 7px 0;margin:11px 0 0}
-.callout b{color:var(--fg);font-weight:500}
-.ta{font-family:var(--font-mono);font-size:12px;min-height:62px;resize:vertical;line-height:1.5}
-.foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:11px;font-size:12.5px}
-.foot-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;color:var(--fg-dim)}
-.foot-row b{color:var(--fg);font-weight:500}
-.foot .dim{color:var(--fg-dim)}
-.foot .small{font-size:11.5px;line-height:1.55;max-width:74ch;margin:0}
+.foot{margin-top:32px;padding-top:18px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px;font-size:12.5px;color:var(--fg-dim)}
+.foot-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.foot b{color:var(--fg);font-weight:500}
+.foot .small{font-size:11.5px;line-height:1.55;max-width:76ch;margin:0}
 .foot code{font-family:var(--font-mono);font-size:11px;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+.foot a{color:var(--fg);text-decoration:underline;text-underline-offset:2px}
 </style>
 </head>
 <body>
@@ -186,168 +160,43 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 
 <div class="wrap">
   <div class="lede">
-    <h1>Databricks platform code, generated.</h1>
-    <p>Three repositories from one place: the workspace and its cloud components as Terraform, Unity Catalog structure as a bundle, and declarative pipelines as another. OIDC throughout, no long-lived secrets.</p>
+    <h1>Terraform for Databricks workspaces on AWS.</h1>
+    <p>Set a naming convention, pick a compute mode, and get a repository that deploys one workspace per environment. Built from the provider's own AWS workspace guide. GitHub Actions with OIDC, no long-lived secrets.</p>
   </div>
-
-  <div class="tabs" role="tablist">
-    <button type="button" role="tab" aria-selected="true" data-tab="platform">Platform</button>
-    <button type="button" role="tab" aria-selected="false" data-tab="governance">Governance</button>
-    <button type="button" role="tab" aria-selected="false" data-tab="pipelines">Pipelines</button>
-  </div>
-  <p class="tabnote" id="tabnote"></p>
 
   <div class="grid">
-    <!-- ============ CONFIG RAIL ============ -->
     <div class="rail">
-      <div class="panel" id="rail-shared" hidden>
+      <div class="panel">
         <div class="sec">
-          <h2>Naming</h2>
-          <div class="two">
-            <div class="field">
-              <label for="s-org">Organisation</label>
-              <input id="s-org" value="acme" spellcheck="false" autocomplete="off">
-            </div>
-            <div class="field">
-              <label for="s-proj">Workload</label>
-              <input id="s-proj" value="lakehouse" spellcheck="false" autocomplete="off">
-            </div>
-          </div>
-          <span class="hint">Shared with the Platform tab.</span>
-        </div>
-        <div class="sec">
-          <h2>Environments</h2>
-          <div class="chips" id="s-envs">
-            <button class="chip" type="button" aria-pressed="true" data-v="dev">dev</button>
-            <button class="chip" type="button" aria-pressed="true" data-v="test">test</button>
-            <button class="chip" type="button" aria-pressed="true" data-v="prod">prod</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ---------------- GOVERNANCE ---------------- -->
-      <div class="panel" id="rail-governance" hidden>
-        <div class="sec">
-          <h2>Domains</h2>
-          <div class="field">
-            <label for="g-domains">One catalog or schema per domain</label>
-            <textarea id="g-domains" class="ta" spellcheck="false">finance
-people
-operations</textarea>
-            <span class="hint">One per line. Lowercase, underscores allowed.</span>
-          </div>
-        </div>
-        <div class="sec">
-          <h2>Isolation</h2>
-          <div class="seg" id="seg-iso" style="--n:2;--i:0;grid-template-columns:repeat(2,1fr)" role="tablist">
-            <button type="button" role="tab" aria-selected="true" data-v="catalog">Catalog per env</button>
-            <button type="button" role="tab" aria-selected="false" data-v="schema">Schema per env</button>
-          </div>
-          <p class="hint" id="isohint" style="margin:9px 0 0;font-size:11.5px;color:var(--fg-dim)"></p>
-        </div>
-        <div class="sec">
-          <h2>Layers</h2>
-          <div class="chips" id="g-layers">
-            <button class="chip" type="button" aria-pressed="true" data-v="bronze">bronze</button>
-            <button class="chip" type="button" aria-pressed="true" data-v="silver">silver</button>
-            <button class="chip" type="button" aria-pressed="true" data-v="gold">gold</button>
-            <button class="chip" type="button" aria-pressed="false" data-v="sandbox">sandbox</button>
-          </div>
-        </div>
-        <div class="sec">
-          <h2>Identity</h2>
-          <div class="swrow">
-            <div class="txt"><b>Access groups per domain</b><span>Reader, writer and owner groups, with grants wired to them.</span></div>
-            <button class="sw" id="g-groups" role="switch" aria-checked="true" type="button" aria-label="Access groups"></button>
-          </div>
-          <div class="swrow">
-            <div class="txt"><b>Service principal per domain</b><span>One identity per domain for its pipelines to run as.</span></div>
-            <button class="sw" id="g-sp" role="switch" aria-checked="true" type="button" aria-label="Service principals"></button>
-          </div>
-          <div class="swrow">
-            <div class="txt"><b>Managed volumes</b><span>A landing volume per domain for file ingestion.</span></div>
-            <button class="sw" id="g-vol" role="switch" aria-checked="true" type="button" aria-label="Volumes"></button>
-          </div>
-          <p class="callout"><b>Bundles cannot create groups or service principals.</b> Those are account-level identity objects, so they are emitted as Terraform in <code>identity/</code> alongside the bundle rather than pretended into the YAML.</p>
-        </div>
-      </div>
-
-      <!-- ---------------- PIPELINES ---------------- -->
-      <div class="panel" id="rail-pipelines" hidden>
-        <div class="sec">
-          <h2>Pipelines</h2>
-          <div class="field">
-            <label for="p-names">One pipeline per line</label>
-            <textarea id="p-names" class="ta" spellcheck="false">orders
-customers</textarea>
-          </div>
-        </div>
-        <div class="sec">
-          <h2>Source</h2>
-          <div class="seg" id="seg-src" style="--n:3;--i:0;grid-template-columns:repeat(3,1fr)" role="tablist">
-            <button type="button" role="tab" aria-selected="true" data-v="files">Files</button>
-            <button type="button" role="tab" aria-selected="false" data-v="kafka">Kafka</button>
-            <button type="button" role="tab" aria-selected="false" data-v="table">Table</button>
-          </div>
-          <p class="hint" id="srchint" style="margin:9px 0 0;font-size:11.5px;color:var(--fg-dim)"></p>
-        </div>
-        <div class="sec">
-          <h2>Execution</h2>
-          <div class="seg" id="seg-trig" style="--n:2;--i:0;grid-template-columns:repeat(2,1fr)" role="tablist">
-            <button type="button" role="tab" aria-selected="true" data-v="triggered">Triggered</button>
-            <button type="button" role="tab" aria-selected="false" data-v="continuous">Continuous</button>
-          </div>
-          <div class="swrow" style="margin-top:11px">
-            <div class="txt"><b>Serverless</b><span>Default. Turn off only where the workload needs classic compute.</span></div>
-            <button class="sw" id="p-serverless" role="switch" aria-checked="true" type="button" aria-label="Serverless"></button>
-          </div>
-          <div class="swrow">
-            <div class="txt"><b>Expectations</b><span>Quality constraints on each silver table, dropping bad rows.</span></div>
-            <button class="sw" id="p-expect" role="switch" aria-checked="true" type="button" aria-label="Expectations"></button>
-          </div>
-          <div class="swrow">
-            <div class="txt"><b>Scheduling job</b><span>A job that runs the pipelines on a cron.</span></div>
-            <button class="sw" id="p-job" role="switch" aria-checked="true" type="button" aria-label="Scheduling job"></button>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel pf">
-        <div class="sec">
-          <h2>Cloud</h2>
-          <div class="seg" id="seg-cloud" style="--n:3;--i:0;grid-template-columns:repeat(3,1fr)" role="tablist">
-            <button type="button" role="tab" aria-selected="true" data-v="aws">AWS</button>
-            <button type="button" role="tab" aria-selected="false" data-v="azure">Azure</button>
-            <button type="button" role="tab" aria-selected="false" data-v="gcp">GCP</button>
-          </div>
-        </div>
-        <div class="sec">
-          <h2>Compute</h2>
-          <div class="seg" id="seg-mode" style="--n:3;--i:2;grid-template-columns:repeat(3,1fr)" role="tablist">
-            <button type="button" role="tab" aria-selected="false" data-v="classic">Classic</button>
+          <h2>Compute mode</h2>
+          <div class="seg" id="seg-mode" style="--i:0" role="tablist">
+            <button type="button" role="tab" aria-selected="true" data-v="classic">Classic</button>
             <button type="button" role="tab" aria-selected="false" data-v="serverless">Serverless</button>
-            <button type="button" role="tab" aria-selected="true" data-v="both">Both</button>
+            <button type="button" role="tab" aria-selected="false" data-v="both">Both</button>
           </div>
-          <p class="hint" id="modehint" style="margin:9px 0 0;font-size:11.5px;color:var(--fg-dim)"></p>
+          <p class="hint" id="modehint" style="margin:10px 0 0"></p>
+        </div>
+        <div class="sec">
+          <h2>Region</h2>
+          <div class="field">
+            <label for="f-region">AWS region</label>
+            <select id="f-region"></select>
+            <span class="hint">The Unity Catalog metastore must already exist in this region.</span>
+          </div>
         </div>
       </div>
 
-      <div class="panel pf">
+      <div class="panel">
         <div class="sec">
           <h2>Naming convention</h2>
-          <div class="field">
-            <label for="f-org">Organisation prefix</label>
-            <input id="f-org" value="acme" spellcheck="false" autocomplete="off">
-            <span class="hint">Lowercase letters and digits, 2–8 characters.</span>
-          </div>
           <div class="two">
+            <div class="field">
+              <label for="f-org">Organisation</label>
+              <input id="f-org" value="acme" spellcheck="false" autocomplete="off">
+            </div>
             <div class="field">
               <label for="f-proj">Workload</label>
               <input id="f-proj" value="lakehouse" spellcheck="false" autocomplete="off">
-            </div>
-            <div class="field">
-              <label for="f-region">Region</label>
-              <select id="f-region"></select>
             </div>
           </div>
           <div class="field">
@@ -357,9 +206,8 @@ customers</textarea>
               <option value="{org}-{workload}-{env}-{res}"></option>
               <option value="{res}-{org}{workload}-{env}"></option>
               <option value="{org}{workload}{env}{res}"></option>
-              <option value="{res}-{org}-{workload}-{env}-001"></option>
             </datalist>
-            <span class="hint" id="pathint">Tokens: {org} {workload} {env} {res}. Anything else is kept literally.</span>
+            <span class="hint" id="pathint">Tokens: {org} {workload} {env} {res}. Anything else is literal.</span>
           </div>
         </div>
         <div class="sec">
@@ -370,49 +218,28 @@ customers</textarea>
             <button class="chip" type="button" aria-pressed="true" data-v="prod">prod</button>
             <button class="chip" type="button" aria-pressed="false" data-v="sbx">sbx</button>
           </div>
+          <p class="hint" style="margin:9px 0 0">One workspace per environment, each with its own state and its own OIDC role.</p>
         </div>
       </div>
 
-      <div class="panel pf">
+      <div class="panel">
         <div class="sec">
           <h2>Resolved names</h2>
           <div class="names" id="names"></div>
         </div>
-        <div class="sec">
-          <h2>Indicative fixed cost</h2>
-          <div class="names" id="cost"></div>
-          <p class="hint" style="margin:9px 0 0;font-size:11px;color:var(--fg-dim)">Per environment, list price, fixed hourly charges only. Excludes data processing, compute and storage. Check your own pricing calculator before quoting these.</p>
-        </div>
       </div>
 
-      <div class="panel pf">
+      <div class="panel">
         <div class="sec">
           <h2>Options</h2>
           <div class="swrow">
-            <div class="txt"><b>PrivateLink</b><span>Front-end and back-end private connectivity. Must exist before the workspace is created.</span></div>
-            <button class="sw" id="o-pl" role="switch" aria-checked="false" type="button" aria-label="PrivateLink"></button>
-          </div>
-          <div class="swrow">
-            <div class="txt"><b>Customer-managed keys</b><span>CMK for managed services and workspace storage. Create-time only.</span></div>
-            <button class="sw" id="o-cmk" role="switch" aria-checked="false" type="button" aria-label="Customer-managed keys"></button>
-          </div>
-          <div class="swrow">
-            <div class="txt"><b>Audit log delivery</b><span>Billable usage and audit logs to your own bucket.</span></div>
+            <div class="txt"><b>Audit log delivery</b><span>Billable usage and audit logs to a bucket of your own.</span></div>
             <button class="sw" id="o-log" role="switch" aria-checked="true" type="button" aria-label="Audit log delivery"></button>
-          </div>
-          <div class="swrow">
-            <div class="txt"><b>Budget policies</b><span>Serverless compute can't carry cluster tags; cost attribution needs these.</span></div>
-            <button class="sw" id="o-budget" role="switch" aria-checked="true" type="button" aria-label="Budget policies"></button>
-          </div>
-          <div class="swrow">
-            <div class="txt"><b>Nightly drift detection</b><span>Scheduled plan that fails the run on unexpected diffs.</span></div>
-            <button class="sw" id="o-drift" role="switch" aria-checked="true" type="button" aria-label="Drift detection"></button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ============ PREVIEW ============ -->
     <div class="panel outpanel">
       <div class="preview">
         <div class="tree">
@@ -428,1136 +255,74 @@ customers</textarea>
         </div>
       </div>
       <div class="bar">
-        <div class="stat"><b id="nfiles">0</b> files · <b id="nbytes">0</b> KB · provider pinned to <b>1.113</b></div>
+        <div class="stat"><b id="nfiles">0</b> files · <b id="nbytes">0</b> KB · <b id="nres">0</b> resources per env</div>
         <button class="mini" id="copyall" type="button">Copy as shell script</button>
         <button class="cta" id="download" type="button">Download .zip</button>
       </div>
-      <div class="note" id="dlnote">The shell script recreates the whole repo in one paste — useful when a browser blocks the download.</div>
+      <div class="note" id="dlnote">The shell script rebuilds the whole repository from one paste, including the directories.</div>
     </div>
   </div>
 
   <footer class="foot">
     <div class="foot-row">
-      <span>Pinned to Databricks provider <b id="f-dbx">1.113</b> · <span id="f-cloudprov"></span></span>
-      <span>Templates last verified against the provider docs on <b>27 October 2026</b>.</span>
+      <span>Pinned to databricks <b id="f-dbx">1.113</b> · aws <b>5.82</b> · terraform <b>&gt;= 1.9</b></span>
     </div>
     <div class="foot-row">
       <button class="mini" id="sharecfg" type="button">Copy config link</button>
-      <span class="dim">Sends a colleague this exact configuration.</span>
+      <span>Sends a colleague this exact configuration.</span>
     </div>
-    <p class="dim small">Brickworks is an independent project. It is not affiliated with, endorsed by, or sponsored by Databricks, Inc. Generated code is a starting point: review it, run <code>terraform plan</code>, and check it against your own standards before applying.</p>
+    <p class="small">The classic path follows the provider's <a href="https://github.com/databricks/terraform-provider-databricks/blob/main/docs/guides/aws-workspace.md">AWS workspace guide</a>; the serverless path follows the <code>compute_mode</code> documentation on <a href="https://registry.terraform.io/providers/databricks/databricks/latest/docs/resources/mws_workspaces">databricks_mws_workspaces</a>. Where this deviates from either, the generated file says so in a comment.</p>
+    <p class="small">Brickworks is an independent project, not affiliated with, endorsed by or sponsored by Databricks, Inc. Review the output and run <code>terraform plan</code> before applying it anywhere real.</p>
   </footer>
 </div>
 
 <script>
 (function(){
 "use strict";
-var S={cloud:"aws",mode:"both",org:"acme",proj:"lakehouse",region:"",pattern:"{org}-{workload}-{env}-{res}",
-       envs:["dev","test","prod"],pl:false,cmk:false,log:true,budget:true,drift:true};
+
+var S={mode:"classic",org:"acme",proj:"lakehouse",region:"",
+       pattern:"{org}-{workload}-{env}-{res}",envs:["dev","test","prod"],
+       log:true};
 var FILES={},CUR="README.md";
-var TAB="platform";
-var G={domains:["finance","people","operations"],iso:"catalog",
-       layers:["bronze","silver","gold"],groups:true,sp:true,vol:true};
-var P={names:["orders","customers"],src:"files",trig:"triggered",
-       serverless:true,expect:true,job:true};
 
-var REGIONS={aws:["eu-west-2","eu-west-1","us-east-1","us-west-2","ap-southeast-2"],
-             azure:["uksouth","westeurope","eastus","northeurope","australiaeast"],
-             gcp:["europe-west2","europe-west1","us-central1","us-east4","australia-southeast1"]};
-var PROV={aws:{n:"aws",v:"5.82.2"},azure:{n:"azurerm",v:"4.14.0"},gcp:{n:"google",v:"6.14.1"}};
-var DBX="1.113.0";
+var REGIONS=["eu-west-1","eu-west-2","eu-central-1","us-east-1","us-east-2",
+             "us-west-2","ap-southeast-1","ap-southeast-2","ca-central-1"];
+var DBX="1.113.0", AWSP="5.82.2", TFVER="1.9.8";
 
-/* ---------- naming ---------- */
+/* ---------------------------------------------------------------- naming */
 function nm(res,env){
-  return S.pattern.replace("{org}",S.org).replace("{workload}",S.proj)
-                  .replace("{env}",env||"dev").replace("{res}",res);
+  return S.pattern.replace(/\{org\}/g,S.org).replace(/\{workload\}/g,S.proj)
+                  .replace(/\{env\}/g,env||"dev").replace(/\{res\}/g,res);
 }
 function squash(s){return s.replace(/[^a-z0-9]/g,"");}
 
 function checks(){
-  var e=S.envs[0]||"dev",out=[];
-  function add(k,v,ok,msg,warn){out.push({k:k,v:v,ok:ok,msg:msg,warn:warn});}
-  if(S.cloud==="aws"){
+  var e=S.envs[0]||"dev",out=[],cls=(S.mode!=="serverless");
+  function add(k,v,ok,msg){out.push({k:k,v:v,ok:ok,msg:msg});}
+  add("Workspace",nm("ws",e),nm("ws",e).length<=64,
+      "Workspace names are 64 characters or fewer.");
+  if(cls){
     var b=nm("root",e);
     add("Root bucket",b,b.length>=3&&b.length<=63&&/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/.test(b),
-        "S3 bucket names are 3–63 chars, lowercase, no underscores.",true);
+        "S3 bucket names are 3–63 characters, lowercase, and globally unique across all of AWS.");
     add("VPC",nm("vpc",e),true,"");
-    add("Workspace",nm("ws",e),nm("ws",e).length<=64,"Workspace name must be 64 characters or fewer.");
-  } else if(S.cloud==="azure"){
-    var sa=squash(nm("dls",e));
-    add("Storage acct",sa,sa.length>=3&&sa.length<=24,
-        "Azure storage account names are 3–24 chars, lowercase alphanumeric only. Shorten the prefix or workload.");
-    var rg=nm("rg",e);
-    add("Resource group",rg,rg.length<=90,"Resource group names are 90 characters or fewer.");
-    add("Workspace",nm("dbw",e),nm("dbw",e).length>=3&&nm("dbw",e).length<=64,"Workspace name must be 3–64 characters.");
-    add("Managed RG",nm("dbw",e)+"-managed",true,"");
-  } else {
-    var gb=nm("root",e);
-    add("GCS bucket",gb,gb.length>=3&&gb.length<=63&&!/goog/.test(gb),
-        "GCS bucket names are 3–63 chars and cannot contain \"goog\".",true);
-    add("VPC",nm("vpc",e),nm("vpc",e).length<=63&&/^[a-z]/.test(nm("vpc",e)),"VPC names must start with a letter, max 63 chars.");
-    add("Workspace",nm("ws",e),true,"");
+    add("Cross-account role",nm("crossaccount",e),nm("crossaccount",e).length<=64,
+        "IAM role names are 64 characters or fewer.");
   }
-  add("State store",squash(S.org+"tfstate"),squash(S.org+"tfstate").length<=24,"Too long for an Azure storage account.");
+  if(S.log){
+    var l=nm("logs",e);
+    add("Log bucket",l,l.length>=3&&l.length<=63,"S3 bucket names are 3–63 characters.");
+  }
+  add("State bucket",squash(S.org+S.proj)+"-tfstate",
+      (squash(S.org+S.proj)+"-tfstate").length<=63,"S3 bucket names are 3–63 characters.");
   return out;
 }
 
-/* ---------- file generation ---------- */
+/* ---------------------------------------------------------------- helpers */
 function hdr(t){return "# "+t+"\n# Generated by Brickworks. Review before applying.\n\n";}
 
-function tfBlock(extra){
-  var p=PROV[S.cloud],s='terraform {\n  required_version = ">= 1.9.0"\n  required_providers {\n'+
-    '    '+p.n+' = {\n      source  = "hashicorp/'+p.n+'"\n      version = "~> '+p.v.split(".").slice(0,2).join(".")+'"\n    }\n'+
-    '    databricks = {\n      source  = "databricks/databricks"\n      version = "~> '+DBX.split(".").slice(0,2).join(".")+'"\n    }\n';
-  if(S.cloud==="aws")s+='    time = {\n      source  = "hashicorp/time"\n      version = "~> 0.12"\n    }\n';
-  if(extra==="azuread")s+='    azuread = {\n      source  = "hashicorp/azuread"\n      version = "~> 3.0"\n    }\n';
-  return s+'  }\n}\n';
-}
-
-function authType(){return S.cloud==="azure"?"github-oidc-azure":"github-oidc";}
-function cloudProvider(){
-  return S.cloud==="aws"?'provider "aws" {\n  region = var.region\n}\n':
-         S.cloud==="azure"?'provider "azurerm" {\n  features {}\n}\n':
-         'provider "google" {\n  project = var.project_id\n  region  = var.region\n}\n';
-}
-function providersAccount(){
-  var host=S.cloud==="azure"?"https://accounts.azuredatabricks.net":
-           S.cloud==="gcp"?"https://accounts.gcp.databricks.com":"https://accounts.cloud.databricks.com";
-  return tfBlock()+"\n"+cloudProvider()+"\n"+
-  'provider "databricks" {\n  alias      = "account"\n  auth_type  = "'+authType()+'"\n'+
-  '  host       = "'+host+'"\n  account_id = var.databricks_account_id\n  client_id  = var.databricks_client_id\n}\n';
-}
-function commonVars(extra){
-  var v='variable "org" {\n  type = string\n}\n\nvariable "workload" {\n  type = string\n}\n\n'+
-        'variable "env" {\n  type = string\n}\n\nvariable "region" {\n  type = string\n}\n\n'+
-        'variable "databricks_account_id" {\n  type = string\n}\n\n'+
-        'variable "databricks_client_id" {\n  type = string\n}\n';
-  if(S.cloud==="gcp")v+='\nvariable "project_id" {\n  type = string\n}\n';
-  return v+(extra||"");
-}
-
-function seedScript(){
-  var L=[],e=S.envs,bucket=squash(S.org+S.proj)+"-tfstate";
-  if(S.cloud==="aws"){
-    L.push("#!/usr/bin/env bash");
-    L.push("#");
-    L.push("# Brickworks seed. Run this once, in AWS CloudShell.");
-    L.push("#");
-    L.push("# It creates the only things Terraform cannot create for itself: the GitHub");
-    L.push("# OIDC trust, the roles CI assumes, and the bucket their state lives in.");
-    L.push("# Everything else in this repo is Terraform, run by GitHub Actions.");
-    L.push("#");
-    L.push("# CloudShell already has the AWS CLI and your console identity, so there are");
-    L.push("# no credentials to configure and nothing to install.");
-    L.push("#");
-    L.push("#   export GITHUB_REPO=your-org/your-repo");
-    L.push("#   bash seed.sh");
-    L.push("#");
-    L.push("# Safe to re-run: every step checks before it creates.");
-    L.push("");
-    L.push("set -euo pipefail");
-    L.push("");
-    L.push('GITHUB_REPO="${GITHUB_REPO:?set GITHUB_REPO to owner/repo before running}"');
-    L.push('REGION="'+S.region+'"');
-    L.push('STATE_BUCKET="'+bucket+'"');
-    L.push('ENVIRONMENTS=('+e.join(" ")+")");
-    L.push("");
-    L.push('ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"');
-    L.push('echo "Seeding AWS account ${ACCOUNT_ID} in ${REGION} for ${GITHUB_REPO}"');
-    L.push("");
-    L.push("# ---------------------------------------------------------------- state bucket");
-    L.push('if aws s3api head-bucket --bucket "$STATE_BUCKET" 2>/dev/null; then');
-    L.push('  echo "  bucket ${STATE_BUCKET} already exists"');
-    L.push("else");
-    L.push('  if [ "$REGION" = "us-east-1" ]; then');
-    L.push('    aws s3api create-bucket --bucket "$STATE_BUCKET" --region "$REGION" >/dev/null');
-    L.push("  else");
-    L.push('    aws s3api create-bucket --bucket "$STATE_BUCKET" --region "$REGION" \\');
-    L.push('      --create-bucket-configuration LocationConstraint="$REGION" >/dev/null');
-    L.push("  fi");
-    L.push('  echo "  created bucket ${STATE_BUCKET}"');
-    L.push("fi");
-    L.push("");
-    L.push('aws s3api put-bucket-versioning --bucket "$STATE_BUCKET" \\');
-    L.push("  --versioning-configuration Status=Enabled");
-    L.push('aws s3api put-bucket-encryption --bucket "$STATE_BUCKET" \\');
-    L.push("  --server-side-encryption-configuration \\");
-    L.push("  '{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}'");
-    L.push('aws s3api put-public-access-block --bucket "$STATE_BUCKET" \\');
-    L.push("  --public-access-block-configuration \\");
-    L.push("  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true");
-    L.push("");
-    L.push("# --------------------------------------------------------------- OIDC provider");
-    L.push("# One per account. If a landing zone already made it, this step is skipped.");
-    L.push('OIDC_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"');
-    L.push('if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "$OIDC_ARN" >/dev/null 2>&1; then');
-    L.push('  echo "  OIDC provider already present"');
-    L.push("else");
-    L.push("  aws iam create-open-id-connect-provider \\");
-    L.push("    --url https://token.actions.githubusercontent.com \\");
-    L.push("    --client-id-list sts.amazonaws.com \\");
-    L.push("    --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1 >/dev/null");
-    L.push('  echo "  created OIDC provider"');
-    L.push("fi");
-    L.push("");
-    L.push("# ------------------------------------------------------------------- helpers");
-    L.push("upsert_role () {  # $1 role name, $2 trust policy json");
-    L.push('  if aws iam get-role --role-name "$1" >/dev/null 2>&1; then');
-    L.push('    aws iam update-assume-role-policy --role-name "$1" --policy-document "$2"');
-    L.push('    echo "  updated trust on $1"');
-    L.push("  else");
-    L.push('    aws iam create-role --role-name "$1" --assume-role-policy-document "$2" \\');
-    L.push('      --description "GitHub Actions, ${GITHUB_REPO}" >/dev/null');
-    L.push('    echo "  created role $1"');
-    L.push("  fi");
-    L.push("}");
-    L.push("");
-    L.push("trust_for () {  # $1 the sub claim to allow");
-    L.push("  cat <<JSON");
-    L.push("{");
-    L.push('  "Version": "2012-10-17",');
-    L.push('  "Statement": [{');
-    L.push('    "Effect": "Allow",');
-    L.push('    "Principal": { "Federated": "${OIDC_ARN}" },');
-    L.push('    "Action": "sts:AssumeRoleWithWebIdentity",');
-    L.push('    "Condition": {');
-    L.push('      "StringEquals": {');
-    L.push('        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",');
-    L.push('        "token.actions.githubusercontent.com:sub": "$1"');
-    L.push("      }");
-    L.push("    }");
-    L.push("  }]");
-    L.push("}");
-    L.push("JSON");
-    L.push("}");
-    L.push("");
-    L.push("# ----------------------------------------------------------------- plan role");
-    L.push("# Read-only, and trusted on pull requests. Plan reads state, so this must never");
-    L.push("# be the apply role: a PR from anyone who can open one would read every secret");
-    L.push("# the state file holds.");
-    L.push('PLAN_ROLE="gha-plan-'+S.org+"-"+S.proj+'"');
-    L.push('upsert_role "$PLAN_ROLE" "$(trust_for "repo:${GITHUB_REPO}:pull_request")"');
-    L.push('aws iam attach-role-policy --role-name "$PLAN_ROLE" \\');
-    L.push("  --policy-arn arn:aws:iam::aws:policy/ReadOnlyAccess");
-    L.push("");
-    L.push("# Plan still takes a state lock, so it writes the lock object and nothing else.");
-    L.push('aws iam put-role-policy --role-name "$PLAN_ROLE" --policy-name tfstate \\');
-    L.push('  --policy-document "$(cat <<JSON');
-    L.push("{");
-    L.push('  "Version": "2012-10-17",');
-    L.push('  "Statement": [');
-    L.push('    { "Effect": "Allow", "Action": ["s3:ListBucket","s3:GetBucketLocation"],');
-    L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}" },');
-    L.push('    { "Effect": "Allow", "Action": ["s3:GetObject"],');
-    L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}/*" },');
-    L.push('    { "Effect": "Allow", "Action": ["s3:PutObject","s3:DeleteObject"],');
-    L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}/*.tflock" }');
-    L.push("  ]");
-    L.push("}");
-    L.push('JSON');
-    L.push('  )"');
-    L.push("");
-    L.push("# --------------------------------------------------------------- apply roles");
-    L.push("# One per environment, trusted only on that GitHub Environment. The environment");
-    L.push("# claim appears in the token only when the job targets it, which is what makes");
-    L.push("# the protection rules on that environment meaningful.");
-    L.push('for ENV in "${ENVIRONMENTS[@]}"; do');
-    L.push('  ROLE="gha-apply-'+S.org+"-"+S.proj+'-${ENV}"');
-    L.push('  upsert_role "$ROLE" "$(trust_for "repo:${GITHUB_REPO}:environment:${ENV}")"');
-    L.push("");
-    L.push("  # Scoped to the services this repo uses. Tighten with resource ARNs once your");
-    L.push("  # naming is settled; this is a starting point, not least privilege.");
-    L.push('  aws iam put-role-policy --role-name "$ROLE" --policy-name terraform \\');
-    L.push('    --policy-document "$(cat <<JSON');
-    L.push("{");
-    L.push('  "Version": "2012-10-17",');
-    L.push('  "Statement": [');
-    L.push('    { "Effect": "Allow", "Action": ["s3:ListBucket","s3:GetBucketLocation"],');
-    L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}" },');
-    L.push('    { "Effect": "Allow", "Action": ["s3:GetObject","s3:PutObject","s3:DeleteObject"],');
-    L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}/*" },');
-    L.push('    { "Effect": "Allow",');
-    L.push('      "Action": ["ec2:*Vpc*","ec2:*Subnet*","ec2:*Route*","ec2:*Gateway*",');
-    L.push('                 "ec2:*SecurityGroup*","ec2:*Address*","ec2:*NetworkAcl*",');
-    L.push('                 "ec2:*VpcEndpoint*","ec2:*Tags","ec2:Describe*"],');
-    L.push('      "Resource": "*" },');
-    L.push('    { "Effect": "Allow",');
-    L.push('      "Action": ["s3:CreateBucket","s3:Get*","s3:List*","s3:Put*","s3:Delete*"],');
-    L.push('      "Resource": "*" },');
-    L.push('    { "Effect": "Allow",');
-    L.push('      "Action": ["iam:CreateRole","iam:DeleteRole","iam:GetRole","iam:UpdateRole",');
-    L.push('                 "iam:PassRole","iam:TagRole","iam:ListRolePolicies",');
-    L.push('                 "iam:PutRolePolicy","iam:GetRolePolicy","iam:DeleteRolePolicy",');
-    L.push('                 "iam:AttachRolePolicy","iam:DetachRolePolicy",');
-    L.push('                 "iam:ListAttachedRolePolicies"],');
-    L.push('      "Resource": "*" }');
-    if(S.cmk){
-      L.push("    ,");
-      L.push('    { "Effect": "Allow",');
-      L.push('      "Action": ["kms:CreateKey","kms:CreateAlias","kms:DeleteAlias","kms:DescribeKey",');
-      L.push('                 "kms:ScheduleKeyDeletion","kms:TagResource","kms:PutKeyPolicy",');
-      L.push('                 "kms:GetKeyPolicy","kms:EnableKeyRotation","kms:ListAliases"],');
-      L.push('      "Resource": "*" }');
-    }
-    L.push("  ]");
-    L.push("}");
-    L.push('JSON');
-    L.push('    )"');
-    L.push("done");
-    L.push("");
-    L.push("# ------------------------------------------------------------------- summary");
-    L.push('cat <<SUMMARY');
-    L.push("");
-    L.push("Done. Set these as repository VARIABLES (Settings > Secrets and variables >");
-    L.push("Actions > Variables). None of them is a secret.");
-    L.push("");
-    L.push("  AWS_REGION            ${REGION}");
-    L.push("  AWS_PLAN_ROLE_ARN     arn:aws:iam::${ACCOUNT_ID}:role/${PLAN_ROLE}");
-    e.forEach(function(en){
-      L.push("  AWS_APPLY_ROLE_ARN    arn:aws:iam::${ACCOUNT_ID}:role/gha-apply-"+S.org+"-"+S.proj+"-"+en+"   ("+en+")");
-    });
-    L.push("  TF_STATE_BUCKET       ${STATE_BUCKET}");
-    L.push("");
-    L.push("Still to do, outside AWS:");
-    L.push("  - Create the Databricks service principal and its federation policy.");
-    L.push("  - Set DATABRICKS_ACCOUNT_ID and DATABRICKS_CLIENT_ID as repo variables.");
-    L.push("  - Create a GitHub Environment named for each of: "+e.join(", "));
-    L.push("SUMMARY");
-  } else if(S.cloud==="azure"){
-    L.push("#!/usr/bin/env bash");
-    L.push("#");
-    L.push("# Brickworks seed. Run this once, in Azure Cloud Shell (bash).");
-    L.push("#");
-    L.push("# Creates the app registrations GitHub Actions federates into, the storage");
-    L.push("# account holding Terraform state, and nothing else. Everything after this");
-    L.push("# is Terraform run by GitHub Actions.");
-    L.push("#");
-    L.push("#   export GITHUB_REPO=your-org/your-repo");
-    L.push("#   bash seed.sh");
-    L.push("");
-    L.push("set -euo pipefail");
-    L.push("");
-    L.push('GITHUB_REPO="${GITHUB_REPO:?set GITHUB_REPO to owner/repo before running}"');
-    L.push('REGION="'+S.region+'"');
-    L.push('RG="'+nm("rg","shared")+'-tfstate"');
-    L.push('SA="'+squash(S.org+"tfstate")+'"');
-    L.push('ENVIRONMENTS=('+e.join(" ")+")");
-    L.push("");
-    L.push('SUB_ID="$(az account show --query id -o tsv)"');
-    L.push('TENANT_ID="$(az account show --query tenantId -o tsv)"');
-    L.push('echo "Seeding subscription ${SUB_ID}"');
-    L.push("");
-    L.push("# ----------------------------------------------------------------- state store");
-    L.push('az group create --name "$RG" --location "$REGION" --output none');
-    L.push('az storage account create --name "$SA" --resource-group "$RG" \\');
-    L.push('  --location "$REGION" --sku Standard_GRS --min-tls-version TLS1_2 \\');
-    L.push("  --allow-blob-public-access false --output none");
-    L.push('az storage container create --name tfstate --account-name "$SA" \\');
-    L.push("  --auth-mode login --output none");
-    L.push("");
-    L.push("# ------------------------------------------------------------- app registrations");
-    L.push("upsert_app () {  # $1 display name -> echoes appId");
-    L.push('  local id');
-    L.push('  id="$(az ad app list --display-name "$1" --query "[0].appId" -o tsv)"');
-    L.push('  if [ -z "$id" ]; then');
-    L.push('    id="$(az ad app create --display-name "$1" --query appId -o tsv)"');
-    L.push('    az ad sp create --id "$id" --output none');
-    L.push("  fi");
-    L.push('  echo "$id"');
-    L.push("}");
-    L.push("");
-    L.push("federate () {  # $1 appId, $2 credential name, $3 subject");
-    L.push('  az ad app federated-credential create --id "$1" --parameters "{');
-    L.push('    \\"name\\": \\"$2\\",');
-    L.push('    \\"issuer\\": \\"https://token.actions.githubusercontent.com\\",');
-    L.push('    \\"subject\\": \\"$3\\",');
-    L.push('    \\"audiences\\": [\\"api://AzureADTokenExchange\\"]');
-    L.push('  }" --output none 2>/dev/null || echo "  credential $2 already present"');
-    L.push("}");
-    L.push("");
-    L.push('PLAN_APP="$(upsert_app "gha-plan-'+S.org+"-"+S.proj+'")"');
-    L.push('federate "$PLAN_APP" "pull-request" "repo:${GITHUB_REPO}:pull_request"');
-    L.push('az role assignment create --assignee "$PLAN_APP" --role Reader \\');
-    L.push('  --scope "/subscriptions/${SUB_ID}" --output none');
-    L.push("");
-    L.push('APPLY_APP="$(upsert_app "gha-apply-'+S.org+"-"+S.proj+'")"');
-    L.push('for ENV in "${ENVIRONMENTS[@]}"; do');
-    L.push('  federate "$APPLY_APP" "env-${ENV}" "repo:${GITHUB_REPO}:environment:${ENV}"');
-    L.push("done");
-    L.push("");
-    L.push("# Contributor creates resources; User Access Administrator is needed because the");
-    L.push("# access connector gets a role assignment on storage.");
-    L.push('for ROLE in Contributor "User Access Administrator"; do');
-    L.push('  az role assignment create --assignee "$APPLY_APP" --role "$ROLE" \\');
-    L.push('    --scope "/subscriptions/${SUB_ID}" --output none');
-    L.push("done");
-    L.push("");
-    L.push('cat <<SUMMARY');
-    L.push("");
-    L.push("Done. Set these as repository VARIABLES. None is a secret.");
-    L.push("");
-    L.push("  ARM_TENANT_ID        ${TENANT_ID}");
-    L.push("  ARM_SUBSCRIPTION_ID  ${SUB_ID}");
-    L.push("  ARM_CLIENT_ID        ${APPLY_APP}    (apply jobs)");
-    L.push("  ARM_PLAN_CLIENT_ID   ${PLAN_APP}    (pull-request plans)");
-    L.push("  TF_STATE_ACCOUNT     ${SA}");
-    L.push("");
-    L.push("Still to do: the Databricks service principal and federation policy, then");
-    L.push("DATABRICKS_ACCOUNT_ID and DATABRICKS_CLIENT_ID, and a GitHub Environment");
-    L.push("named for each of: "+e.join(", "));
-    L.push("SUMMARY");
-  } else {
-    L.push("#!/usr/bin/env bash");
-    L.push("#");
-    L.push("# Brickworks seed. Run this once, in Google Cloud Shell.");
-    L.push("#");
-    L.push("#   export GITHUB_REPO=your-org/your-repo");
-    L.push("#   export PROJECT_ID=your-project");
-    L.push("#   bash seed.sh");
-    L.push("");
-    L.push("set -euo pipefail");
-    L.push("");
-    L.push('GITHUB_REPO="${GITHUB_REPO:?set GITHUB_REPO to owner/repo}"');
-    L.push('PROJECT_ID="${PROJECT_ID:?set PROJECT_ID}"');
-    L.push('REGION="'+S.region+'"');
-    L.push('BUCKET="'+bucket+'"');
-    L.push("");
-    L.push('PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format=\'value(projectNumber)\')"');
-    L.push("");
-    L.push("gcloud services enable iamcredentials.googleapis.com sts.googleapis.com \\");
-    L.push('  --project "$PROJECT_ID"');
-    L.push("");
-    L.push("# ----------------------------------------------------------------- state bucket");
-    L.push('gcloud storage buckets create "gs://${BUCKET}" --project "$PROJECT_ID" \\');
-    L.push('  --location "$REGION" --uniform-bucket-level-access 2>/dev/null \\');
-    L.push('  || echo "  bucket already exists"');
-    L.push('gcloud storage buckets update "gs://${BUCKET}" --versioning');
-    L.push("");
-    L.push("# ------------------------------------------------------- workload identity pool");
-    L.push('gcloud iam workload-identity-pools create github-pool --project "$PROJECT_ID" \\');
-    L.push('  --location global --display-name "GitHub Actions" 2>/dev/null \\');
-    L.push('  || echo "  pool already exists"');
-    L.push("");
-    L.push("# The attribute-condition is not optional. Without it, any repository on GitHub");
-    L.push("# can mint tokens accepted by this pool.");
-    L.push("gcloud iam workload-identity-pools providers create-oidc github-provider \\");
-    L.push('  --project "$PROJECT_ID" --location global --workload-identity-pool github-pool \\');
-    L.push('  --issuer-uri "https://token.actions.githubusercontent.com" \\');
-    L.push("  --attribute-mapping 'google.subject=assertion.sub,attribute.repository=assertion.repository' \\");
-    L.push('  --attribute-condition "assertion.repository == \'${GITHUB_REPO}\'" 2>/dev/null \\');
-    L.push('  || echo "  provider already exists"');
-    L.push("");
-    L.push("# ------------------------------------------------------------- service accounts");
-    L.push('POOL="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-pool"');
-    L.push("");
-    L.push("bind_sa () {  # $1 account id, $2 role, $3 sub");
-    L.push('  gcloud iam service-accounts create "$1" --project "$PROJECT_ID" 2>/dev/null || true');
-    L.push('  local SA="$1@${PROJECT_ID}.iam.gserviceaccount.com"');
-    L.push('  gcloud projects add-iam-policy-binding "$PROJECT_ID" \\');
-    L.push('    --member "serviceAccount:${SA}" --role "$2" --condition None >/dev/null');
-    L.push('  gcloud iam service-accounts add-iam-policy-binding "$SA" --project "$PROJECT_ID" \\');
-    L.push('    --role roles/iam.workloadIdentityUser \\');
-    L.push('    --member "principalSet://iam.googleapis.com/${POOL}/subject/$3" >/dev/null');
-    L.push("}");
-    L.push("");
-    L.push('bind_sa gha-plan  roles/viewer "repo:${GITHUB_REPO}:pull_request"');
-    e.forEach(function(en){
-      L.push('bind_sa gha-apply-'+en+' roles/editor "repo:${GITHUB_REPO}:environment:'+en+'"');
-    });
-    L.push("");
-    L.push('cat <<SUMMARY');
-    L.push("");
-    L.push("Done. Set these as repository VARIABLES. None is a secret.");
-    L.push("");
-    L.push("  GCP_PROJECT_ID     ${PROJECT_ID}");
-    L.push("  GCP_WIF_PROVIDER   ${POOL}/providers/github-provider");
-    L.push("  GCP_SERVICE_ACCOUNT  gha-apply-<env>@${PROJECT_ID}.iam.gserviceaccount.com");
-    L.push("  TF_STATE_BUCKET    ${BUCKET}");
-    L.push("");
-    L.push("Note: serverless private endpoint rules are not available in the Databricks");
-    L.push("Terraform provider on GCP. Create them in the account console after apply.");
-    L.push("SUMMARY");
-  }
-  return L.join("\n")+"\n";
-}
-
-function seedReadme(){
-  var shell=S.cloud==="aws"?"AWS CloudShell":S.cloud==="azure"?"Azure Cloud Shell":"Google Cloud Shell";
-  var how=S.cloud==="aws"?"Open the AWS console, pick your target account and region, and click the\nCloudShell icon in the top bar.":
-          S.cloud==="azure"?"Open the Azure portal and click the Cloud Shell icon in the top bar. Choose\nBash if prompted.":
-          "Open the Google Cloud console, select your project, and click the Cloud Shell\nicon in the top bar.";
-  var r="# Seed\n\nRun once, before anything else. Not Terraform.\n\n";
-  r+="## Why this is not Terraform\n\n";
-  r+="This creates the identity GitHub Actions assumes and the bucket Terraform keeps\nits state in. Terraform cannot create either, because it would need that identity\nto authenticate and that bucket to store state — the things being created. Any\nTerraform here would need its own local state file, which someone then has to\nlook after. A handful of CLI calls avoids all of it.\n\n";
-  r+="It is the only step a human performs, and after it no one needs cloud\ncredentials on a laptop again.\n\n";
-  r+="## Running it\n\n"+how+"\n\nThe shell already has the CLI and your console identity, so there is nothing to\ninstall and no credentials to configure.\n\n";
-  r+="```bash\nexport GITHUB_REPO=your-org/your-repo\n"+(S.cloud==="gcp"?"export PROJECT_ID=your-project\n":"")+"bash seed.sh\n```\n\n";
-  r+="Upload `seed.sh` with the shell's upload button, or paste it into a new file.\n\nThe script is idempotent: every step checks before it creates, so re-running it\nafter a change is safe.\n\n";
-  r+="## What it creates\n\n";
-  if(S.cloud==="aws")r+="- An S3 bucket for Terraform state, versioned and encrypted\n- The GitHub OIDC identity provider, if the account does not already have one\n- `gha-plan-*`, read-only, trusted on pull requests\n- `gha-apply-*`, one per environment, trusted only on that GitHub Environment\n\n";
-  if(S.cloud==="azure")r+="- A resource group and storage account for Terraform state\n- A read-only app registration federated on pull requests\n- An app registration for applies, federated once per environment\n- Role assignments for both\n\n";
-  if(S.cloud==="gcp")r+="- A GCS bucket for Terraform state, versioned\n- A workload identity pool and provider, scoped to this repository\n- A viewer service account for plans and an editor one per environment\n\n";
-  r+="## Two identities, not one\n\nThe plan role is read-only and trusted on `pull_request`. The apply roles are\ntrusted only on `environment:<name>`.\n\nThis matters more than it looks. `terraform plan` reads state, and state holds\nevery value your resources were created with. A single role trusted on\n`repo:owner/name:*` would let anyone who can open a pull request read all of it.\n\n";
-  r+="## After it finishes\n\nThe script prints the repository variables to set. They are variables, not\nsecrets — there is no long-lived credential anywhere in this setup.\n\nThen create a GitHub Environment named for each of: "+S.envs.join(", ")+
-     ". Add required reviewers to the production one; that is what the environment-scoped\ntrust is protecting.\n";
-  return r;
-}
-
-function buildPlatform(){
-  var F={},e0=S.envs[0]||"dev",p=PROV[S.cloud],srv=(S.mode!=="classic"),cls=(S.mode!=="serverless");
-
-  /* ---- README ---- */
-  var r="# "+S.org+"-"+S.proj+" · Databricks on "+S.cloud.toUpperCase()+"\n\n";
-  r+="Generated by Brickworks. Terraform "+(S.cloud==="aws"?"AWS":S.cloud==="azure"?"Azure":"GCP")+
-     ", "+(S.mode==="both"?"classic and serverless":S.mode)+" compute, "+S.envs.length+" environment(s).\n\n";
-  r+="## Apply order\n\n```\nbootstrap/seed.sh            once, by a human, in the cloud shell. Not Terraform.\nstacks/10-platform/          network, account configuration, the workspace\nstacks/20-workspace-config/  catalogs, schemas, warehouse, inside the workspace\n```\n\nEverything after the seed runs in GitHub Actions. No one needs cloud\ncredentials on a laptop.\n\n## Why two stacks and not one\n\nA Terraform provider cannot be configured from a resource created in the same\napply, and the workspace provider needs the workspace URL. So the workspace\nand everything inside it have to be separate states. `20-workspace-config`\nreads the workspace URL from `10-platform`\u2019s state rather than taking it as a\nhand-copied variable.\n\n## Set metastore_id before the first run\n\n`envs/<env>/10-platform.tfvars` ships with a placeholder metastore ID that is\nrejected by a variable validation. Replace it with the real UUID:\n\n```bash\ndatabricks metastores list\n```\n\nOr read it from the account console under Catalog. There is one metastore per\nregion per account and this repo attaches to it; it never creates one.\n\n";
-  r+="## GitHub configuration\n\nThis repo uses OIDC throughout. **There are no repository secrets.**\n\n### Repository variables\n\n| Variable | Value |\n|---|---|\n";
-  r+="| `DATABRICKS_ACCOUNT_ID` | Your Databricks account UUID |\n| `DATABRICKS_CLIENT_ID` | Service principal application ID |\n";
-  if(S.cloud==="aws"){r+="| `AWS_PLAN_ROLE_ARN` | Read-only role, trusted on pull_request |\n| `AWS_APPLY_ROLE_ARN` | Write role, trusted on environment only |\n| `AWS_REGION` | `"+S.region+"` |\n";}
-  if(S.cloud==="azure"){r+="| `ARM_CLIENT_ID` | App registration with a federated credential |\n| `ARM_TENANT_ID` | Entra tenant |\n| `ARM_SUBSCRIPTION_ID` | Target subscription |\n";}
-  if(S.cloud==="gcp"){r+="| `GCP_WIF_PROVIDER` | Workload identity provider resource name |\n| `GCP_SERVICE_ACCOUNT` | Deploy service account email |\n| `GCP_PROJECT_ID` | Target project |\n";}
-  r+="\n### Two identities, not one\n\nA single role trusted on `repo:ORG/REPO:*` lets anyone who can open a pull request run\n`terraform plan` with production credentials. Plan reads state, so that is state exfiltration.\nThe plan identity is read-only and trusted on `pull_request`; the apply identity is trusted\nonly on `environment:<name>`.\n\n";
-  r+="### Databricks federation\n\nRun once, with the Databricks CLI as an account admin:\n\n```bash\ndatabricks account service-principal-federation-policy create ${SP_NUMERIC_ID} --json '{\n  \"oidc_policy\": {\n    \"issuer\": \"https://token.actions.githubusercontent.com\",\n    \"audiences\": [\"https://github.com/YOUR-ORG\"],\n    \"subject\": \"repo:YOUR-ORG/YOUR-REPO:environment:"+e0+"\"\n  }\n}'\n```\n\n";
-  r+="## Before you apply\n\n- A Unity Catalog metastore must already exist in `"+S.region+"`. This repo attaches to it; it never creates one.\n";
-  if(S.cloud==="aws")r+="- `deployment_name` requires Databricks to enable a deployment prefix on your account. Raise that with support first.\n";
-  if(S.cloud==="gcp")r+="- Serverless private endpoint rules are not available in the Terraform provider. Create them in the account console after apply.\n";
-  if(S.cmk)r+="- CMK settings are create-time only. Changing them later replaces the workspace.\n";
-  r+="- Lock file is generated for linux_amd64, darwin_arm64 and darwin_amd64.\n";
-  F["README.md"]=r;
-
-  /* ---- gitignore ---- */
-  F[".gitignore"]=".terraform/\n*.tfstate\n*.tfstate.*\n*.tfplan\ncrash.log\n.terraform.tfstate.lock.info\noverride.tf\noverride.tf.json\n*_override.tf\n.DS_Store\n";
-
-  /* ---- bootstrap: a seed script, not Terraform ----
-     This creates the identity Terraform later assumes and the bucket its state
-     lives in. Terraform cannot create either without already having them, and a
-     Terraform bootstrap just moves the problem to its own state file. */
-  F["bootstrap/seed.sh"]=seedScript();
-  F["bootstrap/README.md"]=seedReadme();
-
-  /* ---- naming module ---- */
-  F["modules/naming/main.tf"]=hdr("naming — single source of truth for every resource name")+
-    'variable "org" {\n  type = string\n}\n\nvariable "workload" {\n  type = string\n}\n\nvariable "env" {\n  type = string\n}\n\n'+
-    'locals {\n  pattern = "'+S.pattern+'"\n\n'+
-    '  resources = [\n'+
-    '    "vpc", "ws", "rg", "root", "dls", "ncc", "pas", "cmk",\n'+
-    '    "crossaccount", "creds", "storage", "logs", "logstorage", "audit",\n'+
-    '  ]\n\n'+
-    '  # Each token is substituted in turn. Nested rather than chained on one line\n'+
-    '  # so that terraform fmt leaves the indentation alone.\n'+
-    '  name = {\n'+
-    '    for res in local.resources :\n'+
-    '    res => replace(\n'+
-    '      replace(\n'+
-    '        replace(\n'+
-    '          replace(local.pattern, "{org}", var.org),\n'+
-    '          "{workload}", var.workload\n'+
-    '        ),\n'+
-    '        "{env}", var.env\n'+
-    '      ),\n'+
-    '      "{res}", res\n'+
-    '    )\n  }\n\n'+
-    '  # Azure storage accounts reject hyphens and cap at 24 characters.\n'+
-    '  storage_account = substr(replace(local.name["dls"], "-", ""), 0, 24)\n}\n\n'+
-    'output "name" {\n  value = local.name\n}\n\noutput "storage_account" {\n  value = local.storage_account\n}\n';
-
-
-  /* ================= 10-platform: cloud + account config + workspace =================
-     00-account and 10-workspace were separate while the account-level objects were
-     shared between environments. They are per-environment now, so the split bought
-     nothing and cost five variables that had to be threaded from one stack's outputs
-     into the other's inputs by hand. One stack, one state, direct references. */
-  F["stacks/10-platform/providers.tf"]=hdr("10-platform providers")+providersAccount();
-
-  var a=hdr("10-platform — networking, account configuration and the workspace");
-  a+='# Everything here is scoped to one environment. Databricks allows a credentials\n';
-  a+='# or storage configuration to be shared between workspaces, but sharing one\n';
-  a+='# between dev and prod puts both behind a single IAM role and a single root\n';
-  a+='# bucket, and prevents each environment living in its own AWS account.\n\n';
-  a+='module "naming" {\n  source   = "../../modules/naming"\n  org      = var.org\n  workload = var.workload\n  env      = var.env\n}\n\n';
-
-  // A serverless workspace runs no compute in the customer account: the provider
-  // docs state such a workspace must not carry credentials_id or
-  // storage_configuration_id, and the Databricks docs confirm serverless compute
-  // and default storage are not deployed in your cloud account. So in
-  // serverless-only mode none of the cross-account plumbing below is created.
-  var awsPlumbing = (S.cloud==="aws" && cls);
-  var awsLogRole  = (S.cloud==="aws" && S.log);
-
-  if(awsPlumbing || awsLogRole){
-    a+='# Both policies are generated by the provider rather than written here, so they\n';
-    a+='# track what Databricks requires. Each carries the provider alias: the only\n';
-    a+='# databricks provider configured in this stack is aliased, and an unqualified\n';
-    a+='# block would fall back to an empty default configuration.\n';
-    a+='data "databricks_aws_assume_role_policy" "this" {\n  provider    = databricks.account\n  external_id = var.databricks_account_id\n}\n\n';
-    a+='data "databricks_aws_crossaccount_policy" "this" {\n  provider = databricks.account\n}\n\n';
-    a+='resource "aws_iam_role" "cross_account" {\n  name               = module.naming.name["crossaccount"]\n  assume_role_policy = data.databricks_aws_assume_role_policy.this.json\n}\n\n';
-    a+='resource "aws_iam_role_policy" "cross_account" {\n  name   = module.naming.name["crossaccount"]\n  role   = aws_iam_role.cross_account.id\n  policy = data.databricks_aws_crossaccount_policy.this.json\n}\n\n';
-    a+='# IAM is eventually consistent. Without this the first apply usually fails with\n# MALFORMED_REQUEST when a credentials configuration is registered.\nresource "time_sleep" "iam" {\n  depends_on      = [aws_iam_role_policy.cross_account]\n  create_duration = "20s"\n}\n\n';
-    a+='resource "databricks_mws_credentials" "this" {\n  provider         = databricks.account\n  account_id       = var.databricks_account_id\n  depends_on       = [time_sleep.iam]\n  credentials_name = module.naming.name["creds"]\n  role_arn         = aws_iam_role.cross_account.arn\n}\n\n';
-  }
-
-  if(awsPlumbing){
-    a+='resource "aws_s3_bucket" "root" {\n  bucket        = module.naming.name["root"]\n  force_destroy = false\n}\n\n';
-    a+='resource "aws_s3_bucket_public_access_block" "root" {\n  bucket                  = aws_s3_bucket.root.id\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n}\n\n';
-    a+='data "databricks_aws_bucket_policy" "root" {\n  provider = databricks.account\n  bucket   = aws_s3_bucket.root.bucket\n}\n\n';
-    a+='resource "aws_s3_bucket_policy" "root" {\n  bucket = aws_s3_bucket.root.id\n  policy = data.databricks_aws_bucket_policy.root.json\n}\n\n';
-    a+='resource "databricks_mws_storage_configurations" "this" {\n  provider                   = databricks.account\n  account_id                 = var.databricks_account_id\n  storage_configuration_name = module.naming.name["storage"]\n  bucket_name                = aws_s3_bucket.root.bucket\n}\n\n';
-  }
-
-  if(S.cloud==="aws"){
-    if(S.pl){
-      a+='# Must exist before the workspace, which references it at creation time.\n';
-      a+='resource "databricks_mws_private_access_settings" "this" {\n  provider                     = databricks.account\n  account_id                   = var.databricks_account_id\n  private_access_settings_name = module.naming.name["pas"]\n  region                       = var.region\n  public_access_enabled        = false\n  private_access_level         = "ACCOUNT"\n}\n\n';
-      if(cls){
-        a+='# PrivateLink needs two interface endpoints: one for the workspace REST API and\n# one for the secure cluster connectivity relay. Each is created in the VPC, then\n# registered with Databricks and attached to the network configuration.\n';
-        a+='resource "aws_security_group" "privatelink" {\n  name   = "${module.naming.name["vpc"]}-pl"\n  vpc_id = aws_vpc.this.id\n\n  ingress {\n    description = "HTTPS from the workspace subnets"\n    from_port   = 443\n    to_port     = 443\n    protocol    = "tcp"\n    cidr_blocks = [var.vpc_cidr]\n  }\n\n  ingress {\n    description = "Relay from the workspace subnets"\n    from_port   = 6666\n    to_port     = 6666\n    protocol    = "tcp"\n    cidr_blocks = [var.vpc_cidr]\n  }\n\n  egress {\n    from_port   = 0\n    to_port     = 0\n    protocol    = "-1"\n    cidr_blocks = [var.vpc_cidr]\n  }\n}\n\n';
-        a+='resource "aws_vpc_endpoint" "rest_api" {\n  vpc_id              = aws_vpc.this.id\n  service_name        = var.privatelink_workspace_service\n  vpc_endpoint_type   = "Interface"\n  subnet_ids          = aws_subnet.private[*].id\n  security_group_ids  = [aws_security_group.privatelink.id]\n  private_dns_enabled = true\n}\n\n';
-        a+='resource "aws_vpc_endpoint" "relay" {\n  vpc_id              = aws_vpc.this.id\n  service_name        = var.privatelink_relay_service\n  vpc_endpoint_type   = "Interface"\n  subnet_ids          = aws_subnet.private[*].id\n  security_group_ids  = [aws_security_group.privatelink.id]\n  private_dns_enabled = true\n}\n\n';
-        a+='resource "databricks_mws_vpc_endpoint" "rest_api" {\n  provider            = databricks.account\n  account_id          = var.databricks_account_id\n  aws_vpc_endpoint_id = aws_vpc_endpoint.rest_api.id\n  vpc_endpoint_name   = "${module.naming.name["vpc"]}-rest"\n  region              = var.region\n}\n\n';
-        a+='resource "databricks_mws_vpc_endpoint" "relay" {\n  provider            = databricks.account\n  account_id          = var.databricks_account_id\n  aws_vpc_endpoint_id = aws_vpc_endpoint.relay.id\n  vpc_endpoint_name   = "${module.naming.name["vpc"]}-relay"\n  region              = var.region\n}\n\n';
-      }
-    }
-    if(S.cmk){
-      a+='resource "aws_kms_key" "this" {\n  description         = "Databricks managed services and workspace storage"\n  enable_key_rotation = true\n}\n\n';
-      a+='resource "aws_kms_alias" "this" {\n  name          = "alias/${module.naming.name["cmk"]}"\n  target_key_id = aws_kms_key.this.key_id\n}\n\n';
-      a+='resource "databricks_mws_customer_managed_keys" "this" {\n  provider   = databricks.account\n  account_id = var.databricks_account_id\n\n  aws_key_info {\n    key_arn   = aws_kms_key.this.arn\n    key_alias = aws_kms_alias.this.name\n  }\n\n  use_cases = ["MANAGED_SERVICES"'+(cls?', "STORAGE"':'')+']\n}\n\n';
-    }
-    if(S.log){
-      a+='resource "aws_s3_bucket" "logs" {\n  bucket = module.naming.name["logs"]\n}\n\n';
-      a+='resource "databricks_mws_storage_configurations" "logs" {\n  provider                   = databricks.account\n  account_id                 = var.databricks_account_id\n  storage_configuration_name = module.naming.name["logstorage"]\n  bucket_name                = aws_s3_bucket.logs.bucket\n}\n\n';
-      a+='resource "databricks_mws_log_delivery" "audit" {\n  provider                 = databricks.account\n  account_id               = var.databricks_account_id\n  credentials_id           = databricks_mws_credentials.this.credentials_id\n  storage_configuration_id = databricks_mws_storage_configurations.logs.storage_configuration_id\n  delivery_path_prefix     = "audit-logs"\n  config_name              = module.naming.name["audit"]\n  log_type                 = "AUDIT_LOGS"\n  output_format            = "JSON"\n}\n\n';
-    }
-  }
-
-  if(srv){
-    a+='# One NCC per environment. An NCC is regional and can serve many workspaces,\n# but each environment gets its own so dev cannot reach prod private endpoints.\n';
-    a+='resource "databricks_mws_network_connectivity_config" "this" {\n  provider   = databricks.account\n  account_id = var.databricks_account_id\n  name       = module.naming.name["ncc"]\n  region     = var.region\n}\n\n';
-    if(S.cloud==="gcp")a+='# Private endpoint rules are not available in the provider on GCP. Create them\n# in the account console once this NCC exists.\n\n';
-    if(S.pl&&S.cloud!=="gcp")a+='# Serverless compute reaches your storage through the NCC rather than the VPC, so\n# it needs a private endpoint rule of its own.\nresource "databricks_mws_ncc_private_endpoint_rule" "storage" {\n  provider                       = databricks.account\n  account_id                     = var.databricks_account_id\n  network_connectivity_config_id = databricks_mws_network_connectivity_config.this.network_connectivity_config_id\n  resource_id                    = var.serverless_private_endpoint_resource_id\n  group_id                       = "'+(S.cloud==="azure"?"blob":"s3")+'"\n}\n\n';
-  }
-
-  /* ---- networking ---- */
-  if(S.cloud==="aws"){
-    if(cls){
-      a+='data "aws_availability_zones" "this" {\n  state = "available"\n}\n\n';
-      a+='resource "aws_vpc" "this" {\n  cidr_block           = var.vpc_cidr\n  enable_dns_hostnames = true\n  enable_dns_support   = true\n  tags                 = { Name = module.naming.name["vpc"] }\n}\n\n';
-      a+='resource "aws_internet_gateway" "this" {\n  vpc_id = aws_vpc.this.id\n}\n\n';
-      a+='resource "aws_subnet" "public" {\n  vpc_id            = aws_vpc.this.id\n  cidr_block        = cidrsubnet(var.vpc_cidr, 4, 0)\n  availability_zone = data.aws_availability_zones.this.names[0]\n}\n\n';
-      a+='resource "aws_subnet" "private" {\n  count             = 2\n  vpc_id            = aws_vpc.this.id\n  cidr_block        = cidrsubnet(var.vpc_cidr, 3, count.index + 1)\n  availability_zone = data.aws_availability_zones.this.names[count.index]\n}\n\n';
-      a+='resource "aws_eip" "nat" {\n  domain = "vpc"\n}\n\n';
-      a+='resource "aws_nat_gateway" "this" {\n  allocation_id = aws_eip.nat.id\n  subnet_id     = aws_subnet.public.id\n  depends_on    = [aws_internet_gateway.this]\n}\n\n';
-      a+='resource "aws_route_table" "public" {\n  vpc_id = aws_vpc.this.id\n\n  route {\n    cidr_block = "0.0.0.0/0"\n    gateway_id = aws_internet_gateway.this.id\n  }\n}\n\n';
-      a+='resource "aws_route_table_association" "public" {\n  subnet_id      = aws_subnet.public.id\n  route_table_id = aws_route_table.public.id\n}\n\n';
-      a+='resource "aws_route_table" "private" {\n  vpc_id = aws_vpc.this.id\n\n  route {\n    cidr_block     = "0.0.0.0/0"\n    nat_gateway_id = aws_nat_gateway.this.id\n  }\n}\n\n';
-      a+='resource "aws_route_table_association" "private" {\n  count          = 2\n  subnet_id      = aws_subnet.private[count.index].id\n  route_table_id = aws_route_table.private.id\n}\n\n';
-      a+='resource "aws_security_group" "this" {\n  name   = module.naming.name["vpc"]\n  vpc_id = aws_vpc.this.id\n\n  ingress {\n    description = "Internal cluster traffic"\n    from_port   = 0\n    to_port     = 65535\n    protocol    = "tcp"\n    self        = true\n  }\n\n  egress {\n    from_port   = 0\n    to_port     = 0\n    protocol    = "-1"\n    cidr_blocks = ["0.0.0.0/0"]\n  }\n}\n\n';
-      a+='# A gateway endpoint for S3 keeps cluster traffic off the NAT gateway. On a busy\n# workspace this is the difference between a small NAT bill and a large one.\nresource "aws_vpc_endpoint" "s3" {\n  vpc_id            = aws_vpc.this.id\n  service_name      = "com.amazonaws.${var.region}.s3"\n  vpc_endpoint_type = "Gateway"\n  route_table_ids   = [aws_route_table.private.id]\n}\n\n';
-      a+='resource "databricks_mws_networks" "this" {\n  provider           = databricks.account\n  account_id         = var.databricks_account_id\n  network_name       = module.naming.name["vpc"]\n  vpc_id             = aws_vpc.this.id\n  subnet_ids         = aws_subnet.private[*].id\n  security_group_ids = [aws_security_group.this.id]\n';
-      if(S.pl)a+='\n  vpc_endpoints {\n    dataplane_relay = [databricks_mws_vpc_endpoint.relay.vpc_endpoint_id]\n    rest_api        = [databricks_mws_vpc_endpoint.rest_api.vpc_endpoint_id]\n  }\n';
-      a+='}\n\n';
-    }
-    a+='resource "databricks_mws_workspaces" "this" {\n  provider       = databricks.account\n  account_id     = var.databricks_account_id\n  workspace_name = module.naming.name["ws"]\n  aws_region     = var.region\n';
-    if(srv && !cls){
-      // SERVERLESS is the only accepted value, and it forces replacement if changed.
-      // Such a workspace must not carry credentials_id or storage_configuration_id.
-      a+='\n  # Serverless workspace: compute and default storage live in the Databricks\n';
-      a+='  # account, so there is no VPC, no root bucket and no storage configuration\n';
-      a+='  # for this workspace'+(S.log?', and the cross-account role above exists only to\n  # deliver audit logs':'')+'.\n';
-      a+='  # SERVERLESS is the only accepted value, and changing it replaces the workspace.\n  compute_mode = "SERVERLESS"\n';
-    } else {
-      a+='\n  credentials_id           = databricks_mws_credentials.this.credentials_id\n  storage_configuration_id = databricks_mws_storage_configurations.this.storage_configuration_id\n';
-      a+='  network_id               = databricks_mws_networks.this.network_id\n';
-    }
-    if(srv)a+='  network_connectivity_config_id = databricks_mws_network_connectivity_config.this.network_connectivity_config_id\n';
-    if(S.pl)a+='  private_access_settings_id     = databricks_mws_private_access_settings.this.private_access_settings_id\n';
-    if(S.cmk){
-      a+='  managed_services_customer_managed_key_id = databricks_mws_customer_managed_keys.this.customer_managed_key_id\n';
-      if(cls)a+='  storage_customer_managed_key_id          = databricks_mws_customer_managed_keys.this.customer_managed_key_id\n';
-    }
-    a+='\n  # No token block. OIDC means there is no reason to mint a PAT and keep it in state.\n}\n\n';
-  } else if(S.cloud==="azure"){
-    a+='resource "azurerm_resource_group" "this" {\n  name     = module.naming.name["rg"]\n  location = var.region\n}\n\n';
-    if(cls){
-      a+='resource "azurerm_virtual_network" "this" {\n  name                = module.naming.name["vpc"]\n  resource_group_name = azurerm_resource_group.this.name\n  location            = azurerm_resource_group.this.location\n  address_space       = [var.vnet_cidr]\n}\n\n';
-      a+='resource "azurerm_network_security_group" "this" {\n  name                = "${module.naming.name["ws"]}-nsg"\n  resource_group_name = azurerm_resource_group.this.name\n  location            = azurerm_resource_group.this.location\n}\n\n';
-      ["public","private"].forEach(function(sn,i){
-        a+='resource "azurerm_subnet" "'+sn+'" {\n  name                 = "snet-dbx-'+sn+'"\n  resource_group_name  = azurerm_resource_group.this.name\n  virtual_network_name = azurerm_virtual_network.this.name\n  address_prefixes     = [cidrsubnet(var.vnet_cidr, 4, '+i+')]\n\n  delegation {\n    name = "databricks"\n\n    service_delegation {\n      name = "Microsoft.Databricks/workspaces"\n      actions = [\n        "Microsoft.Network/virtualNetworks/subnets/join/action",\n        "Microsoft.Network/virtualNetworks/subnets/prepareNetworkPolicies/action",\n        "Microsoft.Network/virtualNetworks/subnets/unprepareNetworkPolicies/action",\n      ]\n    }\n  }\n}\n\n';
-      });
-      a+='# The NSG associations must exist before the workspace references the subnets.\n';
-      ["public","private"].forEach(function(sn){
-        a+='resource "azurerm_subnet_network_security_group_association" "'+sn+'" {\n  subnet_id                 = azurerm_subnet.'+sn+'.id\n  network_security_group_id = azurerm_network_security_group.this.id\n}\n\n';
-      });
-      a+='resource "azurerm_nat_gateway" "this" {\n  name                = "${module.naming.name["ws"]}-nat"\n  resource_group_name = azurerm_resource_group.this.name\n  location            = azurerm_resource_group.this.location\n}\n\n';
-      a+='resource "azurerm_subnet_nat_gateway_association" "private" {\n  subnet_id      = azurerm_subnet.private.id\n  nat_gateway_id = azurerm_nat_gateway.this.id\n}\n\n';
-    }
-    a+='resource "azurerm_databricks_workspace" "this" {\n  name                        = module.naming.name["ws"]\n  resource_group_name         = azurerm_resource_group.this.name\n  location                    = var.region\n  sku                         = "premium"\n  managed_resource_group_name = "${module.naming.name["ws"]}-managed"\n\n';
-    a+='  # Create-time only. Changing any of these replaces the workspace.\n  public_network_access_enabled         = '+(S.pl?"false":"true")+'\n  network_security_group_rules_required = "'+(S.pl?"NoAzureDatabricksRules":"AllRules")+'"\n';
-    if(S.cmk)a+='  customer_managed_key_enabled          = true\n  infrastructure_encryption_enabled     = true\n';
-    if(cls)a+='\n  custom_parameters {\n    no_public_ip                                         = true\n    virtual_network_id                                   = azurerm_virtual_network.this.id\n    public_subnet_name                                   = azurerm_subnet.public.name\n    private_subnet_name                                  = azurerm_subnet.private.name\n    public_subnet_network_security_group_association_id  = azurerm_subnet_network_security_group_association.public.id\n    private_subnet_network_security_group_association_id = azurerm_subnet_network_security_group_association.private.id\n  }\n';
-    a+='}\n\n';
-    a+='# Required for Unity Catalog storage access in both compute modes.\nresource "azurerm_databricks_access_connector" "this" {\n  name                = "${module.naming.name["ws"]}-ac"\n  resource_group_name = azurerm_resource_group.this.name\n  location            = var.region\n\n  identity {\n    type = "SystemAssigned"\n  }\n}\n\n';
-    if(S.cmk){
-      a+='# Ordering: the workspace must exist before its managed identity can be granted\n# on the vault, and the key can only be attached after that grant.\nresource "azurerm_key_vault_access_policy" "managed_services" {\n  key_vault_id = var.key_vault_id\n  tenant_id    = azurerm_databricks_workspace.this.storage_account_identity[0].tenant_id\n  object_id    = azurerm_databricks_workspace.this.storage_account_identity[0].principal_id\n\n  key_permissions = ["Get", "UnwrapKey", "WrapKey"]\n}\n\n';
-      a+='resource "azurerm_databricks_workspace_customer_managed_key" "this" {\n  depends_on       = [azurerm_key_vault_access_policy.managed_services]\n  workspace_id     = azurerm_databricks_workspace.this.id\n  key_vault_key_id = var.cmk_key_id\n}\n\n';
-    }
-  } else {
-    if(cls){
-      a+='resource "google_compute_network" "this" {\n  name                    = module.naming.name["vpc"]\n  auto_create_subnetworks = false\n}\n\n';
-      a+='resource "google_compute_subnetwork" "this" {\n  name          = "${module.naming.name["vpc"]}-node"\n  network       = google_compute_network.this.id\n  region        = var.region\n  ip_cidr_range = var.subnet_cidr\n\n  secondary_ip_range {\n    range_name    = "pods"\n    ip_cidr_range = cidrsubnet(var.subnet_cidr, 1, 1)\n  }\n\n  secondary_ip_range {\n    range_name    = "services"\n    ip_cidr_range = cidrsubnet(var.subnet_cidr, 4, 1)\n  }\n}\n\n';
-      a+='resource "databricks_mws_networks" "this" {\n  provider     = databricks.account\n  account_id   = var.databricks_account_id\n  network_name = module.naming.name["vpc"]\n\n  gcp_network_info {\n    network_project_id    = var.project_id\n    vpc_id                = google_compute_network.this.name\n    subnet_id             = google_compute_subnetwork.this.name\n    subnet_region         = var.region\n    pod_ip_range_name     = "pods"\n    service_ip_range_name = "services"\n  }\n}\n\n';
-    }
-    a+='resource "databricks_mws_workspaces" "this" {\n  provider       = databricks.account\n  account_id     = var.databricks_account_id\n  workspace_name = module.naming.name["ws"]\n  location       = var.region\n\n  cloud_resource_container {\n    gcp {\n      project_id = var.project_id\n    }\n  }\n';
-    if(cls)a+='\n  network_id = databricks_mws_networks.this.network_id\n';
-    a+='}\n\n';
-  }
-
-  var wsId=S.cloud==="azure"?'azurerm_databricks_workspace.this.workspace_id':'databricks_mws_workspaces.this.workspace_id';
-
-  if(srv){
-    // No account_id: ncc_binding does not accept one (confirmed against the schema).
-    a+='resource "databricks_mws_ncc_binding" "this" {\n  provider                       = databricks.account\n  network_connectivity_config_id = databricks_mws_network_connectivity_config.this.network_connectivity_config_id\n  workspace_id                   = '+wsId+'\n}\n\n';
-  }
-
-  a+='# The metastore is an input, not something this stack discovers or creates.\n';
-  a+='# There is exactly one per region per Databricks account, it is usually older\n# than this repo, and creating a second one fails. Take the ID from the account\n# console (Catalog) or `databricks metastores list`, and set it in the tfvars.\n';
-  a+='resource "databricks_metastore_assignment" "this" {\n  provider     = databricks.account\n  metastore_id = var.metastore_id\n  workspace_id = '+wsId+'\n}\n';
-  F["stacks/10-platform/main.tf"]=a;
-
-  /* ---- platform variables ---- */
-  var netVar=S.cloud==="aws"?'variable "vpc_cidr" {\n  description = "CIDR for the workspace VPC. Subnets are derived from it."\n  type        = string\n}\n':
-             S.cloud==="azure"?'variable "vnet_cidr" {\n  description = "CIDR for the workspace VNet. Subnets are derived from it."\n  type        = string\n}\n':
-             'variable "subnet_cidr" {\n  description = "Primary CIDR for the workspace subnetwork."\n  type        = string\n}\n';
-  var pv=commonVars()+'\n'+
-    'variable "metastore_id" {\n'+
-    '  description = "Existing Unity Catalog metastore in this region. Never created here."\n'+
-    '  type        = string\n\n'+
-    '  validation {\n'+
-    '    condition = (\n'+
-    '      can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", var.metastore_id))\n'+
-    '      && var.metastore_id != "00000000-0000-0000-0000-000000000000"\n'+
-    '    )\n'+
-    '    error_message = "Set metastore_id to the real metastore UUID from the account console. The generated placeholder is rejected on purpose."\n'+
-    '  }\n}\n';
-  if(cls)pv+='\n'+netVar;
-  if(S.pl&&srv&&S.cloud!=="gcp")pv+='\nvariable "serverless_private_endpoint_resource_id" {\n  description = "Cloud resource the serverless private endpoint rule targets: the ADLS account on Azure, the S3 endpoint service on AWS."\n  type        = string\n}\n';
-  if(S.pl&&S.cloud==="aws"&&cls)pv+='\n'+
-    'variable "privatelink_workspace_service" {\n'+
-    '  description = "Databricks workspace VPC endpoint service name for this region. Published in the Databricks PrivateLink documentation and different in every region."\n'+
-    '  type        = string\n}\n\n'+
-    'variable "privatelink_relay_service" {\n'+
-    '  description = "Databricks secure cluster connectivity relay endpoint service name for this region."\n'+
-    '  type        = string\n}\n';
-  if(S.cmk&&S.cloud==="azure")pv+='\nvariable "key_vault_id" {\n  type = string\n}\n\nvariable "cmk_key_id" {\n  type = string\n}\n';
-  F["stacks/10-platform/variables.tf"]=hdr("10-platform variables")+pv;
-
-  F["stacks/10-platform/outputs.tf"]=hdr("10-platform outputs")+
-    'output "workspace_url" {\n  value = '+(S.cloud==="azure"?
-      '"https://${azurerm_databricks_workspace.this.workspace_url}"':
-      'databricks_mws_workspaces.this.workspace_url')+'\n}\n\n'+
-    'output "workspace_id" {\n  value = '+wsId+'\n}\n\n'+
-    'output "metastore_id" {\n  value = var.metastore_id\n}\n';
-
-  /* ================= 20-workspace-config ================= */
-  var c=hdr("20-workspace-config — resources inside the workspace");
-  c+='# A separate stack because a provider cannot be configured from a resource\n# created in the same apply. The workspace URL only exists once 10-platform has\n# run, so this stack reads it from that stack\'s state rather than taking it as a\n# hand-copied variable.\n\n';
-  c+='terraform {\n  required_version = ">= 1.9.0"\n\n  required_providers {\n    databricks = {\n      source  = "databricks/databricks"\n      version = "~> '+DBX.split(".").slice(0,2).join(".")+'"\n    }\n  }\n}\n\n';
-
-  var rs=S.cloud==="aws"?
-    'data "terraform_remote_state" "platform" {\n  backend = "s3"\n\n  config = {\n    bucket = var.state_bucket\n    key    = "${var.env}/10-platform.tfstate"\n    region = var.region\n  }\n}\n\n':
-    S.cloud==="azure"?
-    'data "terraform_remote_state" "platform" {\n  backend = "azurerm"\n\n  config = {\n    resource_group_name  = var.state_resource_group\n    storage_account_name = var.state_account\n    container_name       = "tfstate"\n    key                  = "${var.env}/10-platform.tfstate"\n    use_oidc             = true\n    use_azuread_auth     = true\n  }\n}\n\n':
-    'data "terraform_remote_state" "platform" {\n  backend = "gcs"\n\n  config = {\n    bucket = var.state_bucket\n    prefix = "${var.env}/10-platform"\n  }\n}\n\n';
-  c+=rs;
-  c+='provider "databricks" {\n  alias     = "workspace"\n  auth_type = "'+authType()+'"\n  host      = data.terraform_remote_state.platform.outputs.workspace_url\n  client_id = var.databricks_client_id\n}\n\n';
-  c+='resource "databricks_catalog" "main" {\n  provider     = databricks.workspace\n  name         = "${var.workload}_${var.env}"\n  storage_root = var.catalog_storage_root\n  comment      = "Managed by Terraform"\n\n  properties = {\n    environment = var.env\n  }\n}\n\n';
-  ["bronze","silver","gold"].forEach(function(l){
-    c+='resource "databricks_schema" "'+l+'" {\n  provider     = databricks.workspace\n  catalog_name = databricks_catalog.main.name\n  name         = "'+l+'"\n}\n\n';
-  });
-  if(S.budget){
-    // custom_tags is a nested attribute list, not a repeatable block: it takes an
-    // equals sign and a list. Confirmed against the provider schema.
-    c+='# Serverless compute cannot carry cluster tags, so a budget policy is the only\n# way to attribute serverless spend. Set it up with the workspace, not later.\nresource "databricks_budget_policy" "this" {\n  provider    = databricks.workspace\n  policy_name = "${var.workload}-${var.env}"\n\n  custom_tags = [\n    {\n      key   = "environment"\n      value = var.env\n    },\n    {\n      key   = "workload"\n      value = var.workload\n    },\n  ]\n}\n\n';
-  }
-  // Replaces default_catalog_name on the metastore assignment, which is deprecated.
-  // namespace is a block with a single value attribute, per the provider schema.
-  c+='# Sets the workspace default catalog, so unqualified queries resolve here.\n# Replaces default_catalog_name on the metastore assignment, now deprecated.\nresource "databricks_default_namespace_setting" "this" {\n  provider = databricks.workspace\n\n  namespace {\n    value = databricks_catalog.main.name\n  }\n}\n\n';
-  c+='resource "databricks_sql_endpoint" "this" {\n  provider                  = databricks.workspace\n  name                      = "${var.workload}-${var.env}"\n  cluster_size              = var.env == "prod" ? "Medium" : "2X-Small"\n  auto_stop_mins            = 10\n  enable_serverless_compute = '+(srv?"true":"false")+'\n}\n';
-  F["stacks/20-workspace-config/main.tf"]=c;
-
-  var cv='variable "workload" {\n  type = string\n}\n\nvariable "env" {\n  type = string\n}\n\n'+
-         // region only where the remote state backend needs it (s3 does, azurerm and gcs do not)
-         (S.cloud==="aws"?'variable "region" {\n  type = string\n}\n\n':'')+
-         'variable "databricks_client_id" {\n  type = string\n}\n\n'+
-         'variable "catalog_storage_root" {\n  description = "External location backing managed storage. Null inherits the metastore default."\n  type        = string\n  default     = null\n}\n';
-  cv+=S.cloud==="azure"
-    ? '\nvariable "state_resource_group" {\n  type = string\n}\n\nvariable "state_account" {\n  type = string\n}\n'
-    : '\nvariable "state_bucket" {\n  description = "Bucket holding the 10-platform state this stack reads."\n  type        = string\n}\n';
-  F["stacks/20-workspace-config/variables.tf"]=hdr("20-workspace-config variables")+cv;
-
-  /* ---- per-environment, per-stack tfvars ----
-     One file per stack: a shared tfvars passes variables a stack never declared,
-     which Terraform reports as a warning on every run and hides real ones. */
-  var STACKS=["10-platform","20-workspace-config"];
-  S.envs.forEach(function(en,i){
-    var cidr="10."+(i+10)+".0.0/16";
-    var pf='# '+en+' — 10-platform\norg      = "'+S.org+'"\nworkload = "'+S.proj+'"\nenv      = "'+en+'"\nregion   = "'+S.region+'"\n\n';
-    pf+='# From the Databricks account console (Catalog), or `databricks metastores list`.\n';
-    pf+='# One metastore per region per account; this repo attaches to it, never creates it.\n';
-    pf+='metastore_id = "00000000-0000-0000-0000-000000000000"\n';
-    if(cls)pf+='\n'+(S.cloud==="aws"?'vpc_cidr = "'+cidr+'"\n':S.cloud==="azure"?'vnet_cidr = "'+cidr+'"\n':'subnet_cidr = "'+cidr+'"\n');
-    if(S.cloud==="gcp")pf+='\nproject_id = "CHANGE-ME"\n';
-    if(S.pl&&srv&&S.cloud!=="gcp")pf+='\nserverless_private_endpoint_resource_id = "CHANGE-ME"\n';
-    if(S.pl&&S.cloud==="aws"&&cls)pf+='\n# Regional endpoint service names, from the Databricks PrivateLink documentation.\n'+
-      'privatelink_workspace_service = "CHANGE-ME"\nprivatelink_relay_service     = "CHANGE-ME"\n';
-    if(S.cmk&&S.cloud==="azure")pf+='\nkey_vault_id = "CHANGE-ME"\ncmk_key_id   = "CHANGE-ME"\n';
-    F["envs/"+en+"/10-platform.tfvars"]=pf;
-
-    var wf='# '+en+' — 20-workspace-config\nworkload = "'+S.proj+'"\nenv      = "'+en+'"\n'+
-      (S.cloud==="aws"?'region   = "'+S.region+'"\n':'')+'\n';
-    wf+=S.cloud==="azure"
-      ? 'state_resource_group = "'+nm("rg","shared")+'-tfstate"\nstate_account        = "'+squash(S.org+"tfstate")+'"\n'
-      : 'state_bucket = "'+squash(S.org+S.proj)+'-tfstate"\n';
-    F["envs/"+en+"/20-workspace-config.tfvars"]=wf;
-
-    STACKS.forEach(function(st){
-      F["envs/"+en+"/"+st+".backend.hcl"]=
-        (S.cloud==="aws"?
-          'bucket       = "'+squash(S.org+S.proj)+'-tfstate"\nkey          = "'+en+'/'+st+'.tfstate"\nregion       = "'+S.region+'"\nencrypt      = true\nuse_lockfile = true\n':
-         S.cloud==="azure"?
-          'resource_group_name  = "'+nm("rg","shared")+'-tfstate"\nstorage_account_name = "'+squash(S.org+"tfstate")+'"\ncontainer_name       = "tfstate"\nkey                  = "'+en+'/'+st+'.tfstate"\nuse_oidc             = true\nuse_azuread_auth     = true\n':
-          'bucket = "'+squash(S.org+S.proj)+'-tfstate"\nprefix = "'+en+'/'+st+'"\n');
-    });
-  });
-
-  /* ================= workflows ================= */
-  var loginAction=S.cloud==="aws"?"aws-actions/configure-aws-credentials@v4":
-                  S.cloud==="azure"?"azure/login@v2":"google-github-actions/auth@v2";
-  var loginWith=S.cloud==="aws"?
-      "          role-to-assume: ${{ vars[inputs.role_variable] }}\n          aws-region: ${{ vars.AWS_REGION }}\n":
-    S.cloud==="azure"?
-      "          client-id: ${{ vars[inputs.role_variable] }}\n          tenant-id: ${{ vars.ARM_TENANT_ID }}\n          subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}\n":
-      "          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}\n          service_account: ${{ vars[inputs.role_variable] }}\n";
-
-  /* reusable workflow: one step per Terraform command */
-  var r="";
-  r+="# One Terraform run against one stack in one environment.\n";
-  r+="# Each command is its own step so the log and any failure point at the command\n";
-  r+="# that failed, rather than at one long shell block.\n\n";
-  r+="name: terraform-stack\n\non:\n  workflow_call:\n    inputs:\n";
-  r+="      stack:\n        description: Directory under stacks/\n        type: string\n        required: true\n";
-  r+="      environment:\n        description: Environment name, matching envs/<name>/\n        type: string\n        required: true\n";
-  r+="      action:\n        description: plan or apply\n        type: string\n        required: true\n";
-  r+="      role_variable:\n        description: Repository variable holding the role to assume\n        type: string\n        required: true\n";
-  r+="      use_environment:\n        description: Target the GitHub Environment, so the OIDC token carries its claim\n        type: boolean\n        required: false\n        default: true\n\n";
-  r+="permissions:\n  id-token: write\n  contents: read\n\njobs:\n";
-  r+="  terraform:\n    name: ${{ inputs.action }} ${{ inputs.stack }}\n    runs-on: ubuntu-latest\n";
-  r+="    environment: ${{ inputs.use_environment && inputs.environment || '' }}\n\n";
-  r+="    defaults:\n      run:\n        working-directory: stacks/${{ inputs.stack }}\n\n";
-  r+="    env:\n      DATABRICKS_AUTH_TYPE: "+authType()+"\n      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}\n      DATABRICKS_ACCOUNT_ID: ${{ vars.DATABRICKS_ACCOUNT_ID }}\n";
-  r+="      TF_IN_AUTOMATION: \"true\"\n      TF_INPUT: \"0\"\n\n";
-  r+="    steps:\n      - name: Check out\n        uses: actions/checkout@v4\n\n";
-  r+="      - name: Set up Terraform\n        uses: hashicorp/setup-terraform@v3\n        with:\n          terraform_version: 1.9.8\n          terraform_wrapper: false\n\n";
-  r+="      - name: Authenticate to the cloud\n        uses: "+loginAction+"\n        with:\n"+loginWith+"\n";
-  r+="      - name: Terraform init\n        run: |\n          terraform init \\\n            -backend-config=../../envs/${{ inputs.environment }}/${{ inputs.stack }}.backend.hcl\n\n";
-  r+="      - name: Terraform validate\n        run: terraform validate -no-color\n\n";
-  r+="      - name: Terraform plan\n        id: plan\n        run: |\n          terraform plan -no-color -out=tfplan \\\n            -var-file=../../envs/${{ inputs.environment }}/${{ inputs.stack }}.tfvars\n\n";
-  r+="      - name: Show the plan\n        run: terraform show -no-color tfplan\n\n";
-  r+="      # The plan file is written and consumed in this job and never uploaded:\n      # a saved plan holds resolved values in cleartext.\n";
-  r+="      - name: Terraform apply\n        if: inputs.action == 'apply'\n        run: terraform apply -auto-approve tfplan\n\n";
-  r+="      - name: Remove the plan file\n        if: always()\n        run: rm -f tfplan\n";
-  F[".github/workflows/_terraform-stack.yml"]=r;
-
-  /* entry point */
-  var planRole=S.cloud==="aws"?"AWS_PLAN_ROLE_ARN":S.cloud==="azure"?"ARM_PLAN_CLIENT_ID":"GCP_PLAN_SERVICE_ACCOUNT";
-  var applyRole=S.cloud==="aws"?"AWS_APPLY_ROLE_ARN":S.cloud==="azure"?"ARM_CLIENT_ID":"GCP_SERVICE_ACCOUNT";
-
-  var w="name: terraform\n\non:\n";
-  w+="  # Applies are deliberate. Nothing here runs on a push to main.\n";
-  w+="  workflow_dispatch:\n    inputs:\n";
-  w+="      environment:\n        description: Target environment\n        type: choice\n        required: true\n        options:\n";
-  S.envs.forEach(function(en){w+="          - "+en+"\n";});
-  w+="      action:\n        description: plan only, or plan then apply\n        type: choice\n        required: true\n        default: plan\n        options:\n          - plan\n          - apply\n";
-  w+="      stack:\n        description: Which stack to run\n        type: choice\n        required: true\n        default: all\n        options:\n          - all\n          - 10-platform\n          - 20-workspace-config\n\n";
-  w+="  # Pull requests plan "+e0+" with the read-only identity.\n  pull_request:\n";
-  if(S.drift)w+="\n  schedule:\n    - cron: \"41 6 * * 1-5\"\n";
-  w+="\npermissions:\n  id-token: write\n  contents: read\n\n";
-  w+="# Never cancel in flight: a cancelled apply strands the state lock.\nconcurrency:\n  group: terraform-${{ github.event.inputs.environment || github.ref }}\n  cancel-in-progress: false\n\njobs:\n";
-
-  w+="  format:\n    name: fmt\n    runs-on: ubuntu-latest\n    steps:\n      - name: Check out\n        uses: actions/checkout@v4\n\n";
-  w+="      - name: Set up Terraform\n        uses: hashicorp/setup-terraform@v3\n        with:\n          terraform_version: 1.9.8\n\n";
-  w+="      - name: Check formatting\n        run: terraform fmt -check -recursive\n\n";
-
-  w+="  platform:\n    name: 10-platform\n    needs: format\n    if: ${{ github.event_name != 'workflow_dispatch' || inputs.stack == 'all' || inputs.stack == '10-platform' }}\n";
-  w+="    uses: ./.github/workflows/_terraform-stack.yml\n    with:\n      stack: 10-platform\n";
-  w+="      environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || '"+e0+"' }}\n";
-  w+="      action: ${{ github.event_name == 'workflow_dispatch' && inputs.action || 'plan' }}\n";
-  w+="      role_variable: ${{ (github.event_name == 'workflow_dispatch' && inputs.action == 'apply') && '"+applyRole+"' || '"+planRole+"' }}\n";
-  w+="      # A pull request plan must not target an environment: the apply role is\n      # scoped to the environment claim, and the plan role to pull_request.\n";
-  w+="      use_environment: ${{ github.event_name != 'pull_request' }}\n\n";
-
-  w+="  workspace_config:\n    name: 20-workspace-config\n    needs: platform\n    if: ${{ always() && needs.platform.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.stack == 'all' || inputs.stack == '20-workspace-config') }}\n";
-  w+="    uses: ./.github/workflows/_terraform-stack.yml\n    with:\n      stack: 20-workspace-config\n";
-  w+="      environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || '"+e0+"' }}\n";
-  w+="      action: ${{ github.event_name == 'workflow_dispatch' && inputs.action || 'plan' }}\n";
-  w+="      role_variable: ${{ (github.event_name == 'workflow_dispatch' && inputs.action == 'apply') && '"+applyRole+"' || '"+planRole+"' }}\n";
-  w+="      use_environment: ${{ github.event_name != 'pull_request' }}\n";
-  F[".github/workflows/terraform.yml"]=w;
-
-  if(S.drift){
-    var d="# Nightly plan against "+e0+". Fails the run when real infrastructure has\n# drifted from the committed configuration.\n\n";
-    d+="name: drift\n\non:\n  schedule:\n    - cron: \"41 6 * * 1-5\"\n  workflow_dispatch:\n\n";
-    d+="permissions:\n  id-token: write\n  contents: read\n\nconcurrency:\n  group: drift\n  cancel-in-progress: false\n\njobs:\n";
-    d+="  detect:\n    name: drift "+e0+"\n    runs-on: ubuntu-latest\n";
-    d+="    # A scheduled run's OIDC subject is a ref, which neither the plan nor the\n    # apply trust condition matches, so this job targets the environment.\n    environment: "+e0+"\n\n";
-    d+="    defaults:\n      run:\n        working-directory: stacks/10-platform\n\n";
-    d+="    env:\n      DATABRICKS_AUTH_TYPE: "+authType()+"\n      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}\n      DATABRICKS_ACCOUNT_ID: ${{ vars.DATABRICKS_ACCOUNT_ID }}\n      TF_IN_AUTOMATION: \"true\"\n\n";
-    d+="    steps:\n      - name: Check out\n        uses: actions/checkout@v4\n\n";
-    d+="      - name: Set up Terraform\n        uses: hashicorp/setup-terraform@v3\n        with:\n          terraform_version: 1.9.8\n          terraform_wrapper: false\n\n";
-    d+="      - name: Authenticate to the cloud\n        uses: "+loginAction+"\n        with:\n"+loginWith.replace("vars[inputs.role_variable]","vars."+applyRole)+"\n";
-    d+="      - name: Terraform init\n        run: terraform init -backend-config=../../envs/"+e0+"/10-platform.backend.hcl\n\n";
-    d+="      - name: Detect drift\n        run: |\n          # -detailed-exitcode: 0 no changes, 1 error, 2 drift.\n          terraform plan -detailed-exitcode -no-color \\\n            -var-file=../../envs/"+e0+"/10-platform.tfvars\n";
-    F[".github/workflows/drift.yml"]=d;
-  }
-
-  return F;
-}
-
-/* ===================== GOVERNANCE: Unity Catalog bundle ===================== */
-function listOf(id,fallback){
-  var el=document.getElementById(id);
-  var v=(el&&el.value||"").split("\n").map(function(s){
-    return s.trim().toLowerCase().replace(/[^a-z0-9_]/g,"_");}).filter(Boolean);
-  return v.length?v:fallback;
-}
-function buildGovernance(){
-  var F={},doms=G.domains,layers=G.layers,envs=S.envs,perCatalog=(G.iso==="catalog");
-  var bundleName=S.org+"-"+S.proj+"-governance";
-
-  function catName(d,env){return perCatalog?(S.org+"_"+d+"_"+env):(S.org+"_"+d);}
-
-  /* ---- databricks.yml ---- */
-  var y="# "+bundleName+"\n# Generated by Brickworks. Review before deploying.\n\n";
-  y+="bundle:\n  name: "+bundleName+"\n\ninclude:\n  - resources/*.yml\n\n";
-  y+="variables:\n  env:\n    description: Environment short name, used in catalog and schema names\n    default: dev\n";
-  y+="  storage_root:\n    description: External location URL backing managed storage for these catalogs\n    default: \"\"\n\n";
-  y+="targets:\n";
-  envs.forEach(function(en,i){
-    y+="  "+en+":\n";
-    if(i===0)y+="    default: true\n";
-    y+="    mode: "+(en==="prod"?"production":"development")+"\n";
-    y+="    variables:\n      env: "+en+"\n";
-    if(en==="prod")y+="    workspace:\n      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}\n";
-    y+="\n";
-  });
-  F["databricks.yml"]=y;
-
-  /* ---- one catalog file per domain ---- */
-  doms.forEach(function(d){
-    var r="# "+d+" — catalog, schemas and grants\n\nresources:\n  catalogs:\n    "+d+":\n";
-    r+="      name: "+(perCatalog?(S.org+"_"+d+"_${var.env}"):(S.org+"_"+d))+"\n";
-    r+="      comment: \""+d+" domain, managed by the governance bundle\"\n";
-    r+="      properties:\n        domain: "+d+"\n        managed_by: brickworks\n\n";
-    r+="      schemas:\n";
-    layers.forEach(function(l){
-      r+="        - name: "+(perCatalog?l:(l+"_${var.env}"))+"\n";
-      r+="          comment: \""+l+" layer for "+d+"\"\n";
-    });
-    if(G.groups){
-      r+="\n      grants:\n";
-      r+="        - principal: "+d+"_owner\n          privileges:\n            - ALL_PRIVILEGES\n";
-      r+="        - principal: "+d+"_writer\n          privileges:\n            - USE_CATALOG\n            - CREATE_SCHEMA\n";
-      r+="        - principal: "+d+"_reader\n          privileges:\n            - USE_CATALOG\n            - SELECT\n";
-      if(G.sp)r+="        - principal: sp-"+S.org+"-"+d+"-pipelines\n          privileges:\n            - USE_CATALOG\n            - CREATE_SCHEMA\n            - MODIFY\n";
-    }
-    F["resources/"+d+".catalog.yml"]=r;
-
-    if(G.vol){
-      var v="# "+d+" — landing volume for file ingestion\n\nresources:\n  volumes:\n    "+d+"_landing:\n";
-      v+="      catalog_name: "+(perCatalog?(S.org+"_"+d+"_${var.env}"):(S.org+"_"+d))+"\n";
-      v+="      schema_name: "+(perCatalog?layers[0]:(layers[0]+"_${var.env}"))+"\n";
-      v+="      name: landing\n      volume_type: MANAGED\n";
-      v+="      comment: \"Raw files landing here before the "+layers[0]+" tables\"\n";
-      if(G.groups){
-        v+="\n      # Volumes take grants, not permissions. Different shape from jobs and pipelines.\n";
-        v+="      grants:\n        - principal: "+d+"_writer\n          privileges:\n            - WRITE_VOLUME\n";
-        v+="        - principal: "+d+"_reader\n          privileges:\n            - READ_VOLUME\n";
-      }
-      F["resources/"+d+".volume.yml"]=v;
-    }
-  });
-
-  /* ---- identity, which bundles cannot express ---- */
-  if(G.groups||G.sp){
-    var t="# Identity for the governance bundle.\n";
-    t+="#\n# Bundles have no resource type for groups or service principals: they are\n# account-level identity objects, not workspace assets. So they live here, in\n# Terraform, and the bundle's grants reference them by name.\n#\n# Apply this BEFORE deploying the bundle, or the grants will fail on principals\n# that do not exist yet.\n\n";
-    t+="terraform {\n  required_version = \">= 1.9.0\"\n  required_providers {\n    databricks = {\n      source  = \"databricks/databricks\"\n      version = \"~> "+DBX.split(".").slice(0,2).join(".")+"\"\n    }\n  }\n}\n\n";
-    t+="provider \"databricks\" {\n  alias      = \"account\"\n  auth_type  = \""+authType()+"\"\n  host       = \""+(S.cloud==="azure"?"https://accounts.azuredatabricks.net":S.cloud==="gcp"?"https://accounts.gcp.databricks.com":"https://accounts.cloud.databricks.com")+"\"\n  account_id = var.databricks_account_id\n  client_id  = var.databricks_client_id\n}\n\n";
-    t+="locals {\n  domains = "+JSON.stringify(doms).replace(/"/g,'"')+"\n}\n\n";
-    if(G.groups){
-      ["reader","writer","owner"].forEach(function(role){
-        t+="resource \"databricks_group\" \""+role+"\" {\n  provider     = databricks.account\n  for_each     = toset(local.domains)\n  display_name = \"${each.key}_"+role+"\"\n}\n\n";
-      });
-    }
-    if(G.sp){
-      t+="resource \"databricks_service_principal\" \"pipelines\" {\n  provider     = databricks.account\n  for_each     = toset(local.domains)\n  display_name = \"sp-"+S.org+"-${each.key}-pipelines\"\n}\n\n";
-      t+="# The pipeline identity belongs to the domain's writer group, so grants are\n# expressed once against the group rather than twice.\n";
-      if(G.groups)t+="resource \"databricks_group_member\" \"sp_writer\" {\n  provider  = databricks.account\n  for_each  = toset(local.domains)\n  group_id  = databricks_group.writer[each.key].id\n  member_id = databricks_service_principal.pipelines[each.key].id\n}\n\n";
-    }
-    t+="resource \"databricks_mws_permission_assignment\" \"workspace\" {\n  provider     = databricks.account\n  for_each     = toset(local.domains)\n  workspace_id = var.workspace_id\n  principal_id = "+(G.groups?"databricks_group.reader[each.key].id":"databricks_service_principal.pipelines[each.key].id")+"\n  permissions  = [\"USER\"]\n}\n";
-    F["identity/main.tf"]=t;
-    F["identity/variables.tf"]="variable \"databricks_account_id\" {\n  type = string\n}\n\nvariable \"databricks_client_id\" {\n  type = string\n}\n\nvariable \"workspace_id\" {\n  type = string\n}\n";
-  }
-
-  /* ---- CI ---- */
-  F[".github/workflows/deploy.yml"]=
-"name: governance\n\non:\n  push:\n    branches: [main]\n  pull_request:\n\npermissions:\n  id-token: write\n  contents: read\n\nconcurrency:\n  group: governance-${{ github.ref }}\n  cancel-in-progress: false\n\njobs:\n"+
-envs.map(function(en,i){
-  return "  "+en+":\n    runs-on: ubuntu-latest\n    environment: "+en+"\n"+(i>0?"    needs: "+envs[i-1]+"\n":"")+
-  "    env:\n      DATABRICKS_AUTH_TYPE: "+authType()+"\n      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}\n      DATABRICKS_HOST: ${{ vars.DATABRICKS_WORKSPACE_URL }}\n"+
-  "    steps:\n      - uses: actions/checkout@v4\n\n      - uses: databricks/setup-cli@main\n\n      - name: Validate\n        run: databricks bundle validate --strict --target "+en+"\n\n"+
-  "      - name: Deploy\n        if: github.event_name == 'push'\n        run: databricks bundle deploy --target "+en+"\n";
-}).join("\n");
-
-  /* ---- README ---- */
-  var r="# "+bundleName+"\n\nUnity Catalog structure for "+doms.length+" domain(s) across "+envs.length+" environment(s), as a Declarative Automation Bundle.\n\n";
-  r+="## What is where, and why\n\n";
-  r+="| Thing | Lives in | Because |\n|---|---|---|\n";
-  r+="| Catalogs, schemas, volumes, grants | the bundle | They are workspace assets with bundle resource types |\n";
-  r+="| Groups, service principals | `identity/` (Terraform) | Bundles have no resource type for account-level identity |\n\n";
-  r+="Apply `identity/` first. The bundle's grants name principals by string, so\ndeploying the bundle against principals that do not exist fails at grant time,\nafter the catalogs have already been created.\n\n";
-  r+="## Isolation model\n\n";
-  r+=perCatalog
-    ? "**Catalog per environment.** `"+S.org+"_"+doms[0]+"_dev`, `"+S.org+"_"+doms[0]+"_prod`, each holding "+layers.join(", ")+".\n\nStronger blast radius containment: a grant mistake in dev cannot expose prod,\nand the names make the environment obvious in every query. Costs you more\ncatalogs to administer and makes cross-environment comparison queries awkward.\n"
-    : "**Schema per environment.** One `"+S.org+"_"+doms[0]+"` catalog holding "+layers.map(function(l){return l+"_dev";}).join(", ")+" and so on.\n\nFewer catalogs, and cross-environment queries work without federation. The\ntrade-off is that every environment shares one permission boundary, so a\nmis-scoped grant reaches production.\n";
-  r+="\n## Deploying\n\n```bash\ndatabricks bundle validate --strict --target "+envs[0]+"\ndatabricks bundle deploy --target "+envs[0]+"\n```\n\n";
-  r+="## Before first deploy\n\n- A metastore must be attached to the workspace.\n- Set `storage_root` if these catalogs need managed storage of their own; leaving\n  it empty inherits the metastore default.\n- The deploying principal needs `CREATE CATALOG` on the metastore.\n";
-  F["README.md"]=r;
-  F[".gitignore"]=".databricks/\n*.tfstate\n*.tfstate.*\n.terraform/\n";
-  return F;
-}
-
-/* ===================== PIPELINES: SDP bundle ===================== */
-function buildPipelines(){
-  var F={},names=P.names,envs=S.envs,bundleName=S.org+"-"+S.proj+"-pipelines";
-  var layers=["bronze","silver","gold"];
-
-  var y="# "+bundleName+"\n# Generated by Brickworks. Review before deploying.\n\n";
-  y+="bundle:\n  name: "+bundleName+"\n\ninclude:\n  - resources/*.yml\n\n";
-  y+="variables:\n  catalog:\n    description: Target catalog for these pipelines\n    default: "+S.org+"_"+S.proj+"_dev\n";
-  y+="  source_volume:\n    description: Volume path the raw files land in\n    default: /Volumes/"+S.org+"_"+S.proj+"_dev/bronze/landing\n";
-  if(P.src==="kafka")y+="  kafka_bootstrap:\n    description: Kafka bootstrap servers\n    default: \"\"\n";
-  y+="\ntargets:\n";
-  envs.forEach(function(en,i){
-    y+="  "+en+":\n";
-    if(i===0)y+="    default: true\n";
-    y+="    mode: "+(en==="prod"?"production":"development")+"\n";
-    y+="    variables:\n      catalog: "+S.org+"_"+S.proj+"_"+en+"\n";
-    y+="      source_volume: /Volumes/"+S.org+"_"+S.proj+"_"+en+"/bronze/landing\n";
-    if(en==="prod")y+="    workspace:\n      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}\n";
-    y+="\n";
-  });
-  F["databricks.yml"]=y;
-
-  names.forEach(function(n){
-    var r="# "+n+" pipeline\n\nresources:\n  pipelines:\n    "+n+":\n";
-    r+="      name: "+S.org+"-"+n+"-${bundle.target}\n\n";
-    r+="      catalog: ${var.catalog}\n      schema: "+layers[1]+"\n\n";
-    r+="      # root_path with libraries.glob is the current layout. Public preview.\n";
-    r+="      root_path: ../src/pipelines/"+n+"\n\n";
-    r+="      libraries:\n        - glob:\n            include: ../src/pipelines/"+n+"/transformations/**\n\n";
-    r+="      serverless: "+(P.serverless?"true":"false")+"\n";
-    if(!P.serverless)r+="      photon: true\n";
-    if(P.trig==="continuous"){
-      r+="      # Deprecated in favour of a continuous job setting, which takes\n";
-      r+="      # precedence where both are set. Still valid, and clearer in one file.\n";
-      r+="      continuous: true\n";
-    }
-    // No `development:` field: it is deprecated, and `mode: development` on the
-    // target already governs development behaviour for the bundle.
-    r+="      channel: CURRENT\n\n";
-    r+="      configuration:\n        source_volume: ${var.source_volume}\n        pipeline_name: "+n+"\n";
-    if(P.src==="kafka")r+="        kafka_bootstrap: ${var.kafka_bootstrap}\n";
-    r+="\n      permissions:\n        - level: CAN_VIEW\n          group_name: users\n";
-    F["resources/"+n+".pipeline.yml"]=r;
-
-    /* ---- transformations ---- */
-    var src="";
-    src+="# "+n+" — "+layers[0]+" to "+layers[2]+"\n#\n# Declarative pipeline source. Tables are declared, not written: the runtime\n# works out the order from the dependencies between them.\n\n";
-    src+="from pyspark import pipelines as dp\nfrom pyspark.sql import functions as F\n\n";
-    src+="# Pipeline configuration, set in the resource YAML and overridden per target.\n";
-    src+="source_volume = spark.conf.get(\"source_volume\")\n";
-    if(P.src==="kafka")src+="kafka_bootstrap = spark.conf.get(\"kafka_bootstrap\")\n";
-    src+="\n\n";
-
-    src+="@dp.table(\n    name=\""+n+"_bronze\",\n    comment=\"Raw "+n+", landed as received. No reshaping here.\",\n    table_properties={\"quality\": \"bronze\"},\n)\ndef "+n+"_bronze():\n";
-    if(P.src==="files"){
-      src+="    return (\n        spark.readStream.format(\"cloudFiles\")\n        .option(\"cloudFiles.format\", \"json\")\n        .option(\"cloudFiles.inferColumnTypes\", \"true\")\n        .option(\"cloudFiles.schemaLocation\", f\"{source_volume}/_schema/"+n+"\")\n        .load(f\"{source_volume}/"+n+"\")\n        .withColumn(\"_ingested_at\", F.current_timestamp())\n        .withColumn(\"_source_file\", F.col(\"_metadata.file_path\"))\n    )\n\n\n";
-    } else if(P.src==="kafka"){
-      src+="    return (\n        spark.readStream.format(\"kafka\")\n        .option(\"kafka.bootstrap.servers\", kafka_bootstrap)\n        .option(\"subscribe\", \""+n+"\")\n        .option(\"startingOffsets\", \"earliest\")\n        .load()\n        .select(\n            F.col(\"key\").cast(\"string\").alias(\"key\"),\n            F.col(\"value\").cast(\"string\").alias(\"raw\"),\n            F.col(\"timestamp\").alias(\"_kafka_timestamp\"),\n        )\n        .withColumn(\"_ingested_at\", F.current_timestamp())\n    )\n\n\n";
-    } else {
-      src+="    return (\n        spark.readStream.table(f\"{spark.conf.get('catalog')}.bronze."+n+"_raw\")\n        .withColumn(\"_ingested_at\", F.current_timestamp())\n    )\n\n\n";
-    }
-
-    if(P.expect){
-      src+="# Expectations run per row. Failing rows are dropped and counted in the\n# pipeline's data quality metrics, not quarantined anywhere. One decorator per\n# constraint; they stack.\n";
-      src+="@dp.table(\n    name=\""+n+"_silver\",\n    comment=\"Validated and typed "+n+".\",\n    table_properties={\"quality\": \"silver\"},\n)\n";
-      src+="@dp.expect_or_drop(\"id_present\", \"id IS NOT NULL\")\n";
-      src+="@dp.expect_or_drop(\"ingested\", \"_ingested_at IS NOT NULL\")\n";
-      src+="def "+n+"_silver():\n";
-    } else {
-      src+="@dp.table(\n    name=\""+n+"_silver\",\n    comment=\"Validated and typed "+n+".\",\n    table_properties={\"quality\": \"silver\"},\n)\ndef "+n+"_silver():\n";
-    }
-    src+="    return (\n        spark.readStream.table(\""+n+"_bronze\")\n        .dropDuplicates([\"id\"])\n    )\n\n\n";
-
-    src+="@dp.materialized_view(\n    name=\""+n+"_gold\",\n    comment=\"Daily "+n+" aggregate for reporting.\",\n    table_properties={\"quality\": \"gold\"},\n)\ndef "+n+"_gold():\n";
-    src+="    return (\n        spark.read.table(\""+n+"_silver\")\n        .groupBy(F.to_date(\"_ingested_at\").alias(\"day\"))\n        .agg(F.count(\"*\").alias(\"record_count\"))\n    )\n";
-    F["src/pipelines/"+n+"/transformations/"+n+".py"]=src;
-  });
-
-  if(P.job){
-    var j="# Runs every pipeline in this bundle on a schedule.\n\nresources:\n  jobs:\n    "+S.proj+"_pipelines:\n";
-    j+="      name: "+S.org+"-"+S.proj+"-pipelines-${bundle.target}\n\n";
-    j+="      tasks:\n";
-    names.forEach(function(n){
-      j+="        - task_key: "+n+"\n          pipeline_task:\n            pipeline_id: ${resources.pipelines."+n+".id}\n\n";
-    });
-    j+="      schedule:\n        # Off the hour: scheduled work piles up on :00 and queues behind itself.\n        quartz_cron_expression: \"0 23 4 * * ?\"\n        timezone_id: Europe/London\n        pause_status: '${bundle.target == \"prod\" ? \"UNPAUSED\" : \"PAUSED\"}'\n\n";
-    j+="      queue:\n        enabled: true\n\n";
-    j+="      email_notifications:\n        on_failure:\n          - ${workspace.current_user.userName}\n";
-    F["resources/"+S.proj+"_pipelines.job.yml"]=j;
-  }
-
-  F[".github/workflows/deploy.yml"]=
-"name: pipelines\n\non:\n  push:\n    branches: [main]\n  pull_request:\n\npermissions:\n  id-token: write\n  contents: read\n\nconcurrency:\n  group: pipelines-${{ github.ref }}\n  cancel-in-progress: false\n\njobs:\n"+
-envs.map(function(en,i){
-  return "  "+en+":\n    runs-on: ubuntu-latest\n    environment: "+en+"\n"+(i>0?"    needs: "+envs[i-1]+"\n":"")+
-  "    env:\n      DATABRICKS_AUTH_TYPE: "+authType()+"\n      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}\n      DATABRICKS_HOST: ${{ vars.DATABRICKS_WORKSPACE_URL }}\n"+
-  "    steps:\n      - uses: actions/checkout@v4\n\n      - uses: databricks/setup-cli@main\n\n      - name: Validate\n        run: databricks bundle validate --strict --target "+en+"\n\n"+
-  "      - name: Deploy\n        if: github.event_name == 'push'\n        run: databricks bundle deploy --target "+en+"\n";
-}).join("\n");
-
-  var r="# "+bundleName+"\n\n"+names.length+" Spark Declarative Pipeline(s), bronze to gold, as a bundle.\n\n";
-  r+="## Layout\n\n```\nresources/<name>.pipeline.yml      the pipeline definition\nsrc/pipelines/<name>/transformations/   the table declarations\n```\n\n";
-  r+="`root_path` plus a `libraries.glob` means new transformation files are picked\nup without editing the resource YAML.\n\n";
-  r+="## Source\n\n"+(P.src==="files"
-    ? "Auto Loader reads from the landing volume. The schema location sits under the\nsame volume, so schema inference survives across runs — do not point it at a\npath the pipeline cannot write to."
-    : P.src==="kafka"
-    ? "Reads from Kafka, keeping the payload as a string in bronze. Parse in silver\nrather than bronze: when a producer changes shape, you want the raw bytes still\nlanded so the fix is a replay rather than a loss."
-    : "Reads an existing bronze table as a stream, for when ingestion is someone\nelse's pipeline.")+"\n\n";
-  r+="## Execution\n\n"+(P.trig==="continuous"
-    ? "**Continuous.** Compute stays up and tables update as data arrives. Costs more;\nuse it where latency genuinely matters."
-    : "**Triggered.** Each run processes what has arrived and stops. Cheaper, and the\nright default — move to continuous only when a latency requirement forces it.")+"\n";
-  r+=P.serverless?"\nServerless compute: no cluster configuration, and no cluster tags either, so\ncost attribution needs a budget policy.\n":"\nClassic compute with Photon.\n";
-  r+="\n## Deploying\n\n```bash\ndatabricks bundle validate --strict --target "+envs[0]+"\ndatabricks bundle deploy --target "+envs[0]+"\ndatabricks bundle run "+names[0]+" --target "+envs[0]+"\n```\n";
-  F["README.md"]=r;
-  F[".gitignore"]=".databricks/\n__pycache__/\n*.pyc\n";
-  return F;
-}
-
 /* Align consecutive `key = value` lines the way terraform fmt does. The
-   generated workflow runs `fmt -check` as its first step, so output that is
-   merely valid but unaligned fails CI before anything is planned. */
+   workflow runs `fmt -check` first, so unaligned output fails before it plans. */
 function fmtHcl(src){
   var out=[],run=[],re=/^(\s+)([A-Za-z_][A-Za-z0-9_-]*)(\s*)=(\s)/;
   function flush(){
@@ -1583,27 +348,514 @@ function fmtHcl(src){
   return out.join("\n");
 }
 
+/* ================================================================ generator
+   Classic and Both follow the provider's AWS workspace guide: cross-account
+   role from the provider's own policy data sources, root bucket with the
+   provider's bucket policy, a customer-managed VPC with S3, STS and Kinesis
+   endpoints, then networks, credentials, storage configuration and workspace.
+
+   Serverless follows the compute_mode documentation: a serverless workspace
+   runs no compute in the customer account, so it takes no credentials,
+   storage configuration or network, and the workspace resource is four lines.
+
+   Deviations from the guide are commented in the generated files.
+================================================================ */
 function build(){
-  var F = TAB==="governance" ? buildGovernance()
-        : TAB==="pipelines"  ? buildPipelines()
-        : buildPlatform();
-  Object.keys(F).forEach(function(p){
-    if(/\.tf$/.test(p)) F[p]=fmtHcl(F[p]);
+  var F={}, e0=S.envs[0]||"dev";
+  var cls=(S.mode!=="serverless");      // a customer-managed VPC is deployed
+  var srv=(S.mode!=="classic");         // serverless compute is intended
+
+  /* ---- providers ---- */
+  var p='terraform {\n  required_version = ">= 1.9.0"\n\n  required_providers {\n'+
+    '    aws = {\n      source  = "hashicorp/aws"\n      version = "~> '+AWSP.split(".").slice(0,2).join(".")+'"\n    }\n'+
+    '    databricks = {\n      source  = "databricks/databricks"\n      version = "~> '+DBX.split(".").slice(0,2).join(".")+'"\n    }\n';
+  if(cls)p+='    time = {\n      source  = "hashicorp/time"\n      version = "~> 0.12"\n    }\n';
+  p+='  }\n}\n\n';
+  p+='provider "aws" {\n  region = var.region\n\n';
+  p+='  # Refuses to run if the credentials resolve to a different account. The\n';
+  p+='  # account comes from the assumed role, not from this file, so without this\n';
+  p+='  # a misconfigured role variable deploys into the wrong account silently.\n';
+  p+='  allowed_account_ids = [var.aws_account_id]\n}\n\n';
+  p+='# Account-level provider. Every databricks_mws_* resource and the metastore\n';
+  p+='# assignment use this alias; the guide names it "mws".\n';
+  p+='provider "databricks" {\n  alias      = "mws"\n  host       = "https://accounts.cloud.databricks.com"\n';
+  p+='  account_id = var.databricks_account_id\n  client_id  = var.databricks_client_id\n';
+  p+='  auth_type  = "github-oidc"\n}\n';
+  F["stacks/workspace/providers.tf"]=p;
+
+  /* ---- naming module ---- */
+  var keys=["ws","vpc","root","logs","crossaccount","creds","storage","logstorage","audit"];
+  F["modules/naming/main.tf"]=hdr("naming — one source of truth for every resource name")+
+    'variable "org" {\n  type = string\n}\n\nvariable "workload" {\n  type = string\n}\n\nvariable "env" {\n  type = string\n}\n\n'+
+    'locals {\n  pattern = "'+S.pattern+'"\n\n'+
+    '  resources = [\n    '+keys.map(function(k){return '"'+k+'"';}).join(", ")+',\n  ]\n\n'+
+    '  # Tokens are substituted one at a time. Nested rather than chained on one\n'+
+    '  # line so that terraform fmt leaves the indentation alone.\n'+
+    '  name = {\n    for res in local.resources :\n    res => replace(\n      replace(\n        replace(\n          replace(local.pattern, "{org}", var.org),\n          "{workload}", var.workload\n        ),\n        "{env}", var.env\n      ),\n      "{res}", res\n    )\n  }\n}\n\n'+
+    'output "name" {\n  value = local.name\n}\n';
+
+  /* ---- main ---- */
+  var m=hdr("workspace — one Databricks workspace for one environment");
+  m+='module "naming" {\n  source   = "../../modules/naming"\n  org      = var.org\n  workload = var.workload\n  env      = var.env\n}\n\n';
+
+  if(cls){
+    m+='# ---------------------------------------------------------------- IAM\n';
+    m+='# Both policy documents come from the provider, so they track what Databricks\n';
+    m+='# requires instead of being pinned by hand here.\n';
+    m+='data "databricks_aws_assume_role_policy" "this" {\n  provider    = databricks.mws\n  external_id = var.databricks_account_id\n}\n\n';
+    m+='data "databricks_aws_crossaccount_policy" "this" {\n  provider    = databricks.mws\n  policy_type = "customer"\n}\n\n';
+    m+='resource "aws_iam_role" "cross_account" {\n  name               = module.naming.name["crossaccount"]\n  assume_role_policy = data.databricks_aws_assume_role_policy.this.json\n  tags               = local.tags\n}\n\n';
+    m+='resource "aws_iam_role_policy" "cross_account" {\n  name   = module.naming.name["crossaccount"]\n  role   = aws_iam_role.cross_account.id\n  policy = data.databricks_aws_crossaccount_policy.this.json\n}\n\n';
+    m+='# The guide uses this to work around credential validation failing while the\n# role policy is still propagating.\nresource "time_sleep" "role_propagation" {\n  depends_on      = [aws_iam_role_policy.cross_account]\n  create_duration = "20s"\n}\n\n';
+
+    m+='# ---------------------------------------------------------------- network\n';
+    m+='# The guide builds this with terraform-aws-modules/vpc/aws. These are the same\n';
+    m+='# resources written out, so the repository has no external module dependency.\n';
+    m+='# One NAT gateway, as the guide does with single_nat_gateway.\n';
+    m+='data "aws_availability_zones" "this" {\n  state = "available"\n}\n\n';
+    m+='resource "aws_vpc" "this" {\n  cidr_block           = var.vpc_cidr\n  enable_dns_hostnames = true\n  enable_dns_support   = true\n  tags                 = merge(local.tags, { Name = module.naming.name["vpc"] })\n}\n\n';
+    m+='resource "aws_internet_gateway" "this" {\n  vpc_id = aws_vpc.this.id\n  tags   = local.tags\n}\n\n';
+    m+='resource "aws_subnet" "public" {\n  vpc_id            = aws_vpc.this.id\n  cidr_block        = cidrsubnet(var.vpc_cidr, 4, 0)\n  availability_zone = data.aws_availability_zones.this.names[0]\n  tags              = merge(local.tags, { Name = "${module.naming.name["vpc"]}-public" })\n}\n\n';
+    m+='# Two private subnets in different availability zones, which is what a\n# workspace network configuration requires.\nresource "aws_subnet" "private" {\n  count             = 2\n  vpc_id            = aws_vpc.this.id\n  cidr_block        = cidrsubnet(var.vpc_cidr, 3, count.index + 1)\n  availability_zone = data.aws_availability_zones.this.names[count.index]\n  tags              = merge(local.tags, { Name = "${module.naming.name["vpc"]}-private-${count.index}" })\n}\n\n';
+    m+='resource "aws_eip" "nat" {\n  domain = "vpc"\n  tags   = local.tags\n}\n\n';
+    m+='resource "aws_nat_gateway" "this" {\n  allocation_id = aws_eip.nat.id\n  subnet_id     = aws_subnet.public.id\n  depends_on    = [aws_internet_gateway.this]\n  tags          = local.tags\n}\n\n';
+    m+='resource "aws_route_table" "public" {\n  vpc_id = aws_vpc.this.id\n  tags   = local.tags\n\n  route {\n    cidr_block = "0.0.0.0/0"\n    gateway_id = aws_internet_gateway.this.id\n  }\n}\n\n';
+    m+='resource "aws_route_table_association" "public" {\n  subnet_id      = aws_subnet.public.id\n  route_table_id = aws_route_table.public.id\n}\n\n';
+    m+='resource "aws_route_table" "private" {\n  vpc_id = aws_vpc.this.id\n  tags   = local.tags\n\n  route {\n    cidr_block     = "0.0.0.0/0"\n    nat_gateway_id = aws_nat_gateway.this.id\n  }\n}\n\n';
+    m+='resource "aws_route_table_association" "private" {\n  count          = 2\n  subnet_id      = aws_subnet.private[count.index].id\n  route_table_id = aws_route_table.private.id\n}\n\n';
+    m+='# The guide manages the VPC default security group: all internal traffic\n# allowed to itself, all egress allowed.\nresource "aws_default_security_group" "this" {\n  vpc_id = aws_vpc.this.id\n  tags   = merge(local.tags, { Name = "${module.naming.name["vpc"]}-sg" })\n\n  ingress {\n    description = "Internal TCP"\n    from_port   = 0\n    to_port     = 65535\n    protocol    = "tcp"\n    self        = true\n  }\n\n  ingress {\n    description = "Internal UDP"\n    from_port   = 0\n    to_port     = 65535\n    protocol    = "udp"\n    self        = true\n  }\n\n  egress {\n    description = "All egress"\n    from_port   = 0\n    to_port     = 0\n    protocol    = "-1"\n    cidr_blocks = ["0.0.0.0/0"]\n  }\n}\n\n';
+    m+='# The three endpoints the guide creates. S3 is a gateway endpoint on both\n# route tables; STS and Kinesis are interface endpoints on the private subnets.\n# They keep cluster traffic off the NAT gateway, which is most of its cost.\nresource "aws_vpc_endpoint" "s3" {\n  vpc_id            = aws_vpc.this.id\n  service_name      = "com.amazonaws.${var.region}.s3"\n  vpc_endpoint_type = "Gateway"\n  route_table_ids   = [aws_route_table.private.id, aws_route_table.public.id]\n  tags              = local.tags\n}\n\n';
+    ["sts","kinesis-streams"].forEach(function(svc){
+      var key=svc.replace("-","_");
+      m+='resource "aws_vpc_endpoint" "'+key+'" {\n  vpc_id              = aws_vpc.this.id\n  service_name        = "com.amazonaws.${var.region}.'+svc+'"\n  vpc_endpoint_type   = "Interface"\n  subnet_ids          = aws_subnet.private[*].id\n  security_group_ids  = [aws_default_security_group.this.id]\n  private_dns_enabled = true\n  tags                = local.tags\n}\n\n';
+    });
+    m+='resource "databricks_mws_networks" "this" {\n  provider           = databricks.mws\n  account_id         = var.databricks_account_id\n  network_name       = module.naming.name["vpc"]\n  vpc_id             = aws_vpc.this.id\n  subnet_ids         = aws_subnet.private[*].id\n  security_group_ids = [aws_default_security_group.this.id]\n}\n\n';
+
+    m+='# ---------------------------------------------------------------- storage\n';
+    m+='resource "aws_s3_bucket" "root" {\n  bucket        = module.naming.name["root"]\n  force_destroy = false\n  tags          = local.tags\n}\n\n';
+    m+='resource "aws_s3_bucket_server_side_encryption_configuration" "root" {\n  bucket = aws_s3_bucket.root.id\n\n  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm = "AES256"\n    }\n  }\n}\n\n';
+    m+='resource "aws_s3_bucket_public_access_block" "root" {\n  bucket                  = aws_s3_bucket.root.id\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n}\n\n';
+    m+='resource "aws_s3_bucket_versioning" "root" {\n  bucket = aws_s3_bucket.root.id\n\n  versioning_configuration {\n    status = "Disabled"\n  }\n}\n\n';
+    m+='data "databricks_aws_bucket_policy" "root" {\n  provider = databricks.mws\n  bucket   = aws_s3_bucket.root.bucket\n}\n\n';
+    m+='resource "aws_s3_bucket_policy" "root" {\n  bucket = aws_s3_bucket.root.id\n  policy = data.databricks_aws_bucket_policy.root.json\n}\n\n';
+    m+='resource "databricks_mws_credentials" "this" {\n  provider         = databricks.mws\n  account_id       = var.databricks_account_id\n  credentials_name = module.naming.name["creds"]\n  role_arn         = aws_iam_role.cross_account.arn\n  depends_on       = [time_sleep.role_propagation]\n}\n\n';
+    m+='resource "databricks_mws_storage_configurations" "this" {\n  provider                   = databricks.mws\n  account_id                 = var.databricks_account_id\n  storage_configuration_name = module.naming.name["storage"]\n  bucket_name                = aws_s3_bucket.root.bucket\n}\n\n';
+  }
+
+  /* ---- workspace ---- */
+  m+='# ---------------------------------------------------------------- workspace\n';
+  if(!cls){
+    m+='# A serverless workspace. Compute and default storage run in the Databricks\n';
+    m+='# account, so there is no VPC, no root bucket, no cross-account role and no\n';
+    m+='# storage configuration. SERVERLESS is the only accepted value for\n';
+    m+='# compute_mode, and changing it replaces the workspace.\n';
+    m+='resource "databricks_mws_workspaces" "this" {\n  provider       = databricks.mws\n  account_id     = var.databricks_account_id\n  workspace_name = module.naming.name["ws"]\n  aws_region     = var.region\n  compute_mode   = "SERVERLESS"\n}\n\n';
+  } else {
+    m+='resource "databricks_mws_workspaces" "this" {\n  provider                 = databricks.mws\n  account_id               = var.databricks_account_id\n  workspace_name           = module.naming.name["ws"]\n  aws_region               = var.region\n  credentials_id           = databricks_mws_credentials.this.credentials_id\n  storage_configuration_id = databricks_mws_storage_configurations.this.storage_configuration_id\n  network_id               = databricks_mws_networks.this.network_id\n}\n\n';
+  }
+
+  /* ---- serverless egress control, only in Both ---- */
+  if(S.mode==="both"){
+    m+='# ---------------------------------------------------------- serverless egress\n';
+    m+='# Serverless compute in a classic workspace does not run in the VPC above, so\n';
+    m+='# its network access is governed by a network connectivity configuration\n';
+    m+='# instead. One per environment: an NCC is regional and can serve several\n';
+    m+='# workspaces, but sharing one across environments would let dev reach\n';
+    m+='# whatever prod can.\n';
+    m+='#\n';
+    m+='# This is the only part of Both that Classic does not get. Whether serverless\n';
+    m+='# compute is available at all is an account-level setting, not Terraform.\n';
+    m+='resource "databricks_mws_network_connectivity_config" "this" {\n  provider   = databricks.mws\n  account_id = var.databricks_account_id\n  name       = "${module.naming.name["ws"]}-ncc"\n  region     = var.region\n}\n\n';
+    m+='resource "databricks_mws_ncc_binding" "this" {\n  provider                       = databricks.mws\n  network_connectivity_config_id = databricks_mws_network_connectivity_config.this.network_connectivity_config_id\n  workspace_id                   = databricks_mws_workspaces.this.workspace_id\n}\n\n';
+  }
+
+  /* ---- audit logs ---- */
+  if(S.log){
+    m+='# ---------------------------------------------------------------- audit logs\n';
+    m+='# Log delivery authenticates with its own role: the assume role policy for it\n';
+    m+='# differs from the workspace one, which is what for_log_delivery selects.\n';
+    m+='data "databricks_aws_assume_role_policy" "log_delivery" {\n  provider         = databricks.mws\n  external_id      = var.databricks_account_id\n  for_log_delivery = true\n}\n\n';
+    m+='resource "aws_iam_role" "log_delivery" {\n  name               = "${module.naming.name["audit"]}-role"\n  assume_role_policy = data.databricks_aws_assume_role_policy.log_delivery.json\n  tags               = local.tags\n}\n\n';
+    m+='resource "aws_s3_bucket" "logs" {\n  bucket = module.naming.name["logs"]\n  tags   = local.tags\n}\n\n';
+    m+='resource "aws_s3_bucket_public_access_block" "logs" {\n  bucket                  = aws_s3_bucket.logs.id\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n}\n\n';
+    m+='data "databricks_aws_bucket_policy" "logs" {\n  provider         = databricks.mws\n  bucket           = aws_s3_bucket.logs.bucket\n  full_access_role = aws_iam_role.log_delivery.arn\n}\n\n';
+    m+='resource "aws_s3_bucket_policy" "logs" {\n  bucket = aws_s3_bucket.logs.id\n  policy = data.databricks_aws_bucket_policy.logs.json\n}\n\n';
+    m+='resource "databricks_mws_credentials" "log_delivery" {\n  provider         = databricks.mws\n  account_id       = var.databricks_account_id\n  credentials_name = "${module.naming.name["audit"]}-creds"\n  role_arn         = aws_iam_role.log_delivery.arn\n}\n\n';
+    m+='resource "databricks_mws_storage_configurations" "logs" {\n  provider                   = databricks.mws\n  account_id                 = var.databricks_account_id\n  storage_configuration_name = module.naming.name["logstorage"]\n  bucket_name                = aws_s3_bucket.logs.bucket\n}\n\n';
+    m+='resource "databricks_mws_log_delivery" "audit" {\n  provider                 = databricks.mws\n  account_id               = var.databricks_account_id\n  credentials_id           = databricks_mws_credentials.log_delivery.credentials_id\n  storage_configuration_id = databricks_mws_storage_configurations.logs.storage_configuration_id\n  delivery_path_prefix     = "audit-logs"\n  config_name              = module.naming.name["audit"]\n  log_type                 = "AUDIT_LOGS"\n  output_format            = "JSON"\n}\n\n';
+  }
+
+  /* ---- metastore ---- */
+  m+='# ---------------------------------------------------------------- metastore\n';
+  m+='# The metastore is an input. There is one per region per Databricks account,\n';
+  m+='# it is usually older than this repository, and a second one cannot be\n';
+  m+='# created. Take the ID from the account console under Catalog, or from\n';
+  m+='# `databricks metastores list`.\n';
+  m+='resource "databricks_metastore_assignment" "this" {\n  provider     = databricks.mws\n  metastore_id = var.metastore_id\n  workspace_id = databricks_mws_workspaces.this.workspace_id\n}\n';
+  F["stacks/workspace/main.tf"]=m;
+
+  /* ---- locals ---- */
+  F["stacks/workspace/locals.tf"]=hdr("tags applied to every taggable resource")+
+    'locals {\n  tags = {\n    environment = var.env\n    workload    = var.workload\n    managed_by  = "terraform"\n    repository  = var.repository\n  }\n}\n';
+
+  /* ---- variables ---- */
+  var v=hdr("workspace variables")+
+    'variable "org" {\n  description = "Organisation prefix used in every resource name."\n  type        = string\n}\n\n'+
+    'variable "workload" {\n  description = "Workload name used in every resource name."\n  type        = string\n}\n\n'+
+    'variable "env" {\n  description = "Environment name. One workspace per environment."\n  type        = string\n}\n\n'+
+    'variable "region" {\n  description = "AWS region. The Unity Catalog metastore must already exist here."\n  type        = string\n}\n\n'+
+    'variable "repository" {\n  description = "owner/repo, recorded as a tag so a resource can be traced back."\n  type        = string\n}\n\n'+
+    'variable "aws_account_id" {\n  description = "Expected AWS account. The provider refuses to run against any other."\n  type        = string\n\n  validation {\n    condition     = can(regex("^[0-9]{12}$", var.aws_account_id))\n    error_message = "aws_account_id must be the 12-digit account number."\n  }\n}\n\n'+
+    'variable "databricks_account_id" {\n  description = "Databricks account UUID."\n  type        = string\n}\n\n'+
+    'variable "databricks_client_id" {\n  description = "Application ID of the Databricks service principal. Not the numeric ID."\n  type        = string\n}\n\n'+
+    'variable "metastore_id" {\n  description = "Existing Unity Catalog metastore in this region. Never created here."\n  type        = string\n\n  validation {\n    condition = (\n      can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", var.metastore_id))\n      && var.metastore_id != "00000000-0000-0000-0000-000000000000"\n    )\n    error_message = "Set metastore_id to the real metastore UUID. The generated placeholder is rejected on purpose."\n  }\n}\n';
+  if(cls)v+='\nvariable "vpc_cidr" {\n  description = "CIDR for the workspace VPC. The subnets are derived from it."\n  type        = string\n\n  validation {\n    condition     = can(cidrnetmask(var.vpc_cidr))\n    error_message = "vpc_cidr must be valid CIDR notation, for example 10.10.0.0/16."\n  }\n}\n';
+  F["stacks/workspace/variables.tf"]=v;
+
+  F["stacks/workspace/outputs.tf"]=hdr("workspace outputs")+
+    'output "workspace_url" {\n  description = "Host for the workspace-level provider in any downstream repository."\n  value       = databricks_mws_workspaces.this.workspace_url\n}\n\n'+
+    'output "workspace_id" {\n  value = databricks_mws_workspaces.this.workspace_id\n}\n';
+
+  /* ---- envs ---- */
+  S.envs.forEach(function(en,i){
+    var t='# '+en+'\norg        = "'+S.org+'"\nworkload   = "'+S.proj+'"\nenv        = "'+en+'"\nregion     = "'+S.region+'"\nrepository = "CHANGE-ME"\n\n';
+    t+='# The provider refuses to run if the assumed role lands in another account.\n';
+    t+='aws_account_id = "000000000000"\n\n';
+    t+='databricks_account_id = "00000000-0000-0000-0000-000000000000"\n';
+    t+='databricks_client_id  = "00000000-0000-0000-0000-000000000000"\n\n';
+    t+='# From the account console under Catalog, or `databricks metastores list`.\n';
+    t+='metastore_id = "00000000-0000-0000-0000-000000000000"\n';
+    if(cls)t+='\nvpc_cidr = "10.'+(i+10)+'.0.0/16"\n';
+    F["envs/"+en+"/terraform.tfvars"]=t;
+
+    F["envs/"+en+"/backend.hcl"]=
+      '# One state file per environment.\n'+
+      'bucket       = "'+squash(S.org+S.proj)+'-tfstate"\n'+
+      'key          = "'+en+'/workspace.tfstate"\n'+
+      'region       = "'+S.region+'"\n'+
+      'encrypt      = true\n'+
+      'use_lockfile = true\n';
+  });
+
+  /* ---- workflows: two standalone files, no reusable-workflow indirection ---- */
+  var SETUP =
+"      - name: Check out\n        uses: actions/checkout@v4\n\n"+
+"      - name: Set up Terraform\n        uses: hashicorp/setup-terraform@v3\n        with:\n          terraform_version: "+TFVER+"\n          terraform_wrapper: false\n\n";
+
+  function awsAuth(roleVar){
+    return "      - name: Authenticate to AWS\n        uses: aws-actions/configure-aws-credentials@v4\n        with:\n"+
+           "          role-to-assume: ${{ vars."+roleVar+" }}\n          aws-region: ${{ vars.AWS_REGION }}\n\n";
+  }
+
+  var ENVBLOCK =
+"    env:\n      DATABRICKS_AUTH_TYPE: github-oidc\n      TF_IN_AUTOMATION: \"true\"\n      TF_INPUT: \"0\"\n\n";
+
+  var CHDIR = "    defaults:\n      run:\n        working-directory: stacks/workspace\n\n";
+
+  /* ---------------------------------------------------------------- plan.yml */
+  var pl="# Plan only. Runs on every pull request, and on demand for any environment.\n";
+  pl+="# Uses the read-only role: plan reads state, and state holds every value a\n";
+  pl+="# resource was created with.\n\n";
+  pl+="name: terraform plan\n\non:\n  pull_request:\n\n  workflow_dispatch:\n    inputs:\n";
+  pl+="      environment:\n        description: Environment to plan\n        type: choice\n        required: true\n        options:\n";
+  S.envs.forEach(function(en){pl+="          - "+en+"\n";});
+  pl+="\npermissions:\n  id-token: write\n  contents: read\n\n";
+  pl+="concurrency:\n  group: plan-${{ github.event.inputs.environment || github.ref }}\n  cancel-in-progress: true\n\n";
+  pl+="jobs:\n  plan:\n    name: plan ${{ inputs.environment || '"+e0+"' }}\n    runs-on: ubuntu-latest\n\n";
+  pl+="    # No environment: on a pull request the token must carry the pull_request\n";
+  pl+="    # subject, which is what the read-only role trusts.\n\n";
+  pl+=CHDIR+ENVBLOCK;
+  pl+="    steps:\n"+SETUP;
+  pl+="      - name: Check formatting\n        working-directory: .\n        run: terraform fmt -check -recursive\n\n";
+  pl+=awsAuth("AWS_PLAN_ROLE_ARN");
+  pl+="      - name: Terraform init\n        run: |\n          terraform init \\\n            -backend-config=../../envs/${{ inputs.environment || '"+e0+"' }}/backend.hcl\n\n";
+  pl+="      - name: Terraform validate\n        run: terraform validate -no-color\n\n";
+  pl+="      - name: Terraform plan\n        run: |\n          terraform plan -no-color \\\n            -var-file=../../envs/${{ inputs.environment || '"+e0+"' }}/terraform.tfvars\n";
+  F[".github/workflows/plan.yml"]=pl;
+
+  /* --------------------------------------------------------------- apply.yml */
+  var ap="# Apply. Manual only: pick the environment. Nothing applies on a push.\n";
+  ap+="# The job targets the GitHub Environment, so the token carries the\n";
+  ap+="# environment claim that the apply role trusts, and that environment's\n";
+  ap+="# protection rules apply.\n\n";
+  ap+="name: terraform apply\n\non:\n  workflow_dispatch:\n    inputs:\n";
+  ap+="      environment:\n        description: Environment to apply\n        type: choice\n        required: true\n        options:\n";
+  S.envs.forEach(function(en){ap+="          - "+en+"\n";});
+  ap+="\npermissions:\n  id-token: write\n  contents: read\n\n";
+  ap+="# Never cancel in flight: a cancelled apply strands the state lock.\n";
+  ap+="concurrency:\n  group: apply-${{ inputs.environment }}\n  cancel-in-progress: false\n\n";
+  ap+="jobs:\n  apply:\n    name: apply ${{ inputs.environment }}\n    runs-on: ubuntu-latest\n    environment: ${{ inputs.environment }}\n\n";
+  ap+=CHDIR+ENVBLOCK;
+  ap+="    steps:\n"+SETUP;
+  ap+="      - name: Check formatting\n        working-directory: .\n        run: terraform fmt -check -recursive\n\n";
+  ap+=awsAuth("AWS_APPLY_ROLE_ARN");
+  ap+="      - name: Terraform init\n        run: |\n          terraform init \\\n            -backend-config=../../envs/${{ inputs.environment }}/backend.hcl\n\n";
+  ap+="      - name: Terraform validate\n        run: terraform validate -no-color\n\n";
+  ap+="      - name: Terraform plan\n        run: |\n          terraform plan -no-color -out=tfplan \\\n            -var-file=../../envs/${{ inputs.environment }}/terraform.tfvars\n\n";
+  ap+="      - name: Show the plan\n        run: terraform show -no-color tfplan\n\n";
+  ap+="      # The plan is written and applied in this job and never uploaded: a saved\n";
+  ap+="      # plan file holds resolved values in cleartext.\n";
+  ap+="      - name: Terraform apply\n        run: terraform apply -auto-approve tfplan\n\n";
+  ap+="      - name: Remove the plan file\n        if: always()\n        run: rm -f tfplan\n";
+  F[".github/workflows/apply.yml"]=ap;
+
+
+  /* ---- seed ---- */
+  F["bootstrap/seed.sh"]=seedScript();
+  F["bootstrap/README.md"]=seedReadme();
+
+  /* ---- README ---- */
+  var r="# "+S.org+"-"+S.proj+" · Databricks on AWS\n\n";
+  r+="One Databricks workspace per environment ("+S.envs.join(", ")+") in `"+S.region+"`, as Terraform.\n\n";
+  r+="Compute mode: **"+(S.mode==="classic"?"Classic":S.mode==="serverless"?"Serverless":"Both")+"**. ";
+  r+=(S.mode==="classic"
+    ? "A classic workspace with a customer-managed VPC. No network connectivity configuration, so serverless compute in this workspace has no governed egress path. Whether serverless is available at all is an account-level setting, not something this repository controls."
+    : S.mode==="serverless"
+    ? "A serverless workspace. Compute and default storage run in the Databricks account, so this repository creates no VPC, no root bucket and no cross-account role. The workspace resource is five lines."
+    : "A classic workspace with a customer-managed VPC, plus a network connectivity configuration so that serverless compute in the workspace has a governed egress path.")+"\n\n";
+  r+="## Where this comes from\n\n";
+  r+="The classic path follows the provider's [AWS workspace guide](https://github.com/databricks/terraform-provider-databricks/blob/main/docs/guides/aws-workspace.md): the\n";
+  r+="cross-account role built from `databricks_aws_assume_role_policy` and\n";
+  r+="`databricks_aws_crossaccount_policy`, the root bucket with\n";
+  r+="`databricks_aws_bucket_policy`, a VPC with S3, STS and Kinesis endpoints, then\n";
+  r+="networks, credentials, storage configuration and the workspace.\n\n";
+  r+="Two deliberate differences, both commented where they appear:\n\n";
+  r+="- The guide builds the VPC with `terraform-aws-modules/vpc/aws`. The same\n  resources are written out here so the repository has no external module\n  dependency to track.\n";
+  r+="- The guide authenticates with a client secret. This uses OIDC, so there is no\n  secret to store.\n\n";
+  r+="## Apply order\n\n```\nbootstrap/seed.sh    once, by a human, in CloudShell. Not Terraform.\nstacks/workspace/    everything else, run by GitHub Actions\n```\n\n";
+  r+="## Before the first run\n\n1. A Unity Catalog metastore must already exist in `"+S.region+"`. Set its ID in\n   each `envs/<env>/terraform.tfvars`; the placeholder is rejected by a variable\n   validation.\n2. Replace `aws_account_id`, `databricks_account_id`, `databricks_client_id` and\n   `repository` in each tfvars file.\n3. Run the seed script. It prints the repository variables to set.\n\n";
+  r+="## Repository variables\n\nOIDC throughout. **There are no repository secrets.**\n\n";
+  r+="| Variable | Value |\n|---|---|\n";
+  r+="| `AWS_REGION` | `"+S.region+"` |\n";
+  r+="| `AWS_PLAN_ROLE_ARN` | Read-only role, trusted on `pull_request` |\n";
+  r+="| `AWS_APPLY_ROLE_ARN` | Write role, trusted on `environment:<name>` only |\n\n";
+  r+="### Two identities, not one\n\n";
+  r+="`terraform plan` reads state, and state holds every value a resource was\ncreated with. A single role trusted on `repo:owner/name:*` would let anyone who\ncan open a pull request read all of it. So the plan role is read-only and\ntrusted on `pull_request`; the apply roles are trusted only on\n`environment:<name>`, which is a claim the token carries only when the job\ntargets that environment.\n\n";
+  r+="### Databricks authentication\n\nRun once, as a Databricks account admin:\n\n```bash\ndatabricks account service-principal-federation-policy create ${SP_NUMERIC_ID} --json '{\n  \"oidc_policy\": {\n    \"issuer\": \"https://token.actions.githubusercontent.com\",\n    \"audiences\": [\"https://github.com/YOUR-ORG\"],\n    \"subject\": \"repo:YOUR-ORG/YOUR-REPO:environment:"+e0+"\"\n  }\n}'\n```\n\n";
+  r+="`SP_NUMERIC_ID` is the service principal's numeric ID, visible in the account\nconsole URL. `databricks_client_id` is its application UUID. They are different\nvalues for the same principal and mixing them up produces an authentication\nerror that does not say which one is wrong.\n\n";
+  r+="One policy per environment, up to 20 per principal.\n\n";
+  r+="## Running it\n\nTwo workflows, each a plain sequence of steps.\n\n| Workflow | Trigger | Identity |\n|---|---|---|\n| `terraform plan` | every pull request, or on demand for any environment | `AWS_PLAN_ROLE_ARN`, read-only |\n| `terraform apply` | manual only: Actions → terraform apply → Run workflow | `AWS_APPLY_ROLE_ARN`, environment-scoped |\n\nBoth run format check, init, validate and plan as separate steps. Apply adds\n`terraform show` and the apply itself. Nothing applies on a push to any branch.\n\nThe plan workflow deliberately does not target a GitHub Environment: on a pull\nrequest the OIDC token must carry the `pull_request` subject, which is what the\nread-only role trusts. The apply workflow does target one, so the token carries\nthe environment claim and that environment\u2019s protection rules apply.\n";
+  F["README.md"]=r;
+
+  F[".gitignore"]=".terraform/\n*.tfstate\n*.tfstate.*\n*.tfplan\ntfplan\ncrash.log\n.terraform.tfstate.lock.info\noverride.tf\noverride.tf.json\n*_override.tf\n.DS_Store\n";
+
+  /* format every HCL file the way fmt -check expects */
+  Object.keys(F).forEach(function(k){
+    if(/\.tf$/.test(k)) F[k]=fmtHcl(F[k]);
   });
   return F;
 }
 
-/* ---------- rendering ---------- */
+/* ---------------------------------------------------------------- seed */
+function seedScript(){
+  var L=[],bucket=squash(S.org+S.proj)+"-tfstate";
+  L.push("#!/usr/bin/env bash");
+  L.push("#");
+  L.push("# Brickworks seed. Run once, in AWS CloudShell.");
+  L.push("#");
+  L.push("# This creates the identity GitHub Actions assumes and the bucket Terraform");
+  L.push("# keeps its state in. Terraform cannot create either, because it would need");
+  L.push("# that identity to authenticate and that bucket to store state. CloudShell");
+  L.push("# already has the AWS CLI and your console identity, so there is nothing to");
+  L.push("# install and no credentials to configure.");
+  L.push("#");
+  L.push("#   export GITHUB_REPO=your-org/your-repo");
+  L.push("#   bash seed.sh");
+  L.push("#");
+  L.push("# Safe to re-run: every step checks before it creates.");
+  L.push("");
+  L.push("set -euo pipefail");
+  L.push("");
+  L.push('GITHUB_REPO="${GITHUB_REPO:?set GITHUB_REPO to owner/repo before running}"');
+  L.push('REGION="'+S.region+'"');
+  L.push('STATE_BUCKET="'+bucket+'"');
+  L.push('ENVIRONMENTS=('+S.envs.join(" ")+")");
+  L.push("");
+  L.push('ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"');
+  L.push('echo "Seeding AWS account ${ACCOUNT_ID} in ${REGION} for ${GITHUB_REPO}"');
+  L.push("");
+  L.push("# ---------------------------------------------------------- state bucket");
+  L.push('if aws s3api head-bucket --bucket "$STATE_BUCKET" 2>/dev/null; then');
+  L.push('  echo "  bucket ${STATE_BUCKET} already exists"');
+  L.push("else");
+  L.push('  if [ "$REGION" = "us-east-1" ]; then');
+  L.push('    aws s3api create-bucket --bucket "$STATE_BUCKET" --region "$REGION" >/dev/null');
+  L.push("  else");
+  L.push('    aws s3api create-bucket --bucket "$STATE_BUCKET" --region "$REGION" \\');
+  L.push('      --create-bucket-configuration LocationConstraint="$REGION" >/dev/null');
+  L.push("  fi");
+  L.push('  echo "  created bucket ${STATE_BUCKET}"');
+  L.push("fi");
+  L.push("");
+  L.push('aws s3api put-bucket-versioning --bucket "$STATE_BUCKET" \\');
+  L.push("  --versioning-configuration Status=Enabled");
+  L.push('aws s3api put-bucket-encryption --bucket "$STATE_BUCKET" \\');
+  L.push("  --server-side-encryption-configuration \\");
+  L.push("  '{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}'");
+  L.push('aws s3api put-public-access-block --bucket "$STATE_BUCKET" \\');
+  L.push("  --public-access-block-configuration \\");
+  L.push("  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true");
+  L.push("");
+  L.push("# --------------------------------------------------------- OIDC provider");
+  L.push("# One per account. Skipped if a landing zone already created it.");
+  L.push('OIDC_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"');
+  L.push('if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "$OIDC_ARN" >/dev/null 2>&1; then');
+  L.push('  echo "  OIDC provider already present"');
+  L.push("else");
+  L.push("  aws iam create-open-id-connect-provider \\");
+  L.push("    --url https://token.actions.githubusercontent.com \\");
+  L.push("    --client-id-list sts.amazonaws.com \\");
+  L.push("    --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1 >/dev/null");
+  L.push('  echo "  created OIDC provider"');
+  L.push("fi");
+  L.push("");
+  L.push("# ---------------------------------------------------------------- helpers");
+  L.push("upsert_role () {  # $1 role name, $2 trust policy json");
+  L.push('  if aws iam get-role --role-name "$1" >/dev/null 2>&1; then');
+  L.push('    aws iam update-assume-role-policy --role-name "$1" --policy-document "$2"');
+  L.push('    echo "  updated trust on $1"');
+  L.push("  else");
+  L.push('    aws iam create-role --role-name "$1" --assume-role-policy-document "$2" \\');
+  L.push('      --description "GitHub Actions, ${GITHUB_REPO}" >/dev/null');
+  L.push('    echo "  created role $1"');
+  L.push("  fi");
+  L.push("}");
+  L.push("");
+  L.push("trust_for () {  # $1 the sub claim to allow");
+  L.push("  cat <<JSON");
+  L.push("{");
+  L.push('  "Version": "2012-10-17",');
+  L.push('  "Statement": [{');
+  L.push('    "Effect": "Allow",');
+  L.push('    "Principal": { "Federated": "${OIDC_ARN}" },');
+  L.push('    "Action": "sts:AssumeRoleWithWebIdentity",');
+  L.push('    "Condition": {');
+  L.push('      "StringEquals": {');
+  L.push('        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",');
+  L.push('        "token.actions.githubusercontent.com:sub": "$1"');
+  L.push("      }");
+  L.push("    }");
+  L.push("  }]");
+  L.push("}");
+  L.push("JSON");
+  L.push("}");
+  L.push("");
+  L.push("# -------------------------------------------------------------- plan role");
+  L.push("# Read-only, trusted on pull requests. Plan reads state, so this must never");
+  L.push("# be the apply role: a pull request from anyone who can open one would");
+  L.push("# otherwise read every value in the state file.");
+  L.push('PLAN_ROLE="gha-plan-'+S.org+"-"+S.proj+'"');
+  L.push('upsert_role "$PLAN_ROLE" "$(trust_for "repo:${GITHUB_REPO}:pull_request")"');
+  L.push('aws iam attach-role-policy --role-name "$PLAN_ROLE" \\');
+  L.push("  --policy-arn arn:aws:iam::aws:policy/ReadOnlyAccess");
+  L.push("");
+  L.push("# Plan takes a state lock, so it writes the lock object and nothing else.");
+  L.push('aws iam put-role-policy --role-name "$PLAN_ROLE" --policy-name tfstate \\');
+  L.push('  --policy-document "$(cat <<JSON');
+  L.push("{");
+  L.push('  "Version": "2012-10-17",');
+  L.push('  "Statement": [');
+  L.push('    { "Effect": "Allow", "Action": ["s3:ListBucket","s3:GetBucketLocation"],');
+  L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}" },');
+  L.push('    { "Effect": "Allow", "Action": ["s3:GetObject"],');
+  L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}/*" },');
+  L.push('    { "Effect": "Allow", "Action": ["s3:PutObject","s3:DeleteObject"],');
+  L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}/*.tflock" }');
+  L.push("  ]");
+  L.push("}");
+  L.push("JSON");
+  L.push('  )"');
+  L.push("");
+  L.push("# ------------------------------------------------------------- apply roles");
+  L.push("# One per environment, trusted only on that GitHub Environment. The");
+  L.push("# environment claim appears in the token only when the job targets it,");
+  L.push("# which is what makes that environment's protection rules meaningful.");
+  L.push('for ENV in "${ENVIRONMENTS[@]}"; do');
+  L.push('  ROLE="gha-apply-'+S.org+"-"+S.proj+'-${ENV}"');
+  L.push('  upsert_role "$ROLE" "$(trust_for "repo:${GITHUB_REPO}:environment:${ENV}")"');
+  L.push("");
+  L.push("  # Scoped to the services this repository uses. Tighten with resource ARNs");
+  L.push("  # once your naming is settled; this is a starting point, not least");
+  L.push("  # privilege.");
+  L.push('  aws iam put-role-policy --role-name "$ROLE" --policy-name terraform \\');
+  L.push('    --policy-document "$(cat <<JSON');
+  L.push("{");
+  L.push('  "Version": "2012-10-17",');
+  L.push('  "Statement": [');
+  L.push('    { "Effect": "Allow", "Action": ["s3:ListBucket","s3:GetBucketLocation"],');
+  L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}" },');
+  L.push('    { "Effect": "Allow", "Action": ["s3:GetObject","s3:PutObject","s3:DeleteObject"],');
+  L.push('      "Resource": "arn:aws:s3:::${STATE_BUCKET}/*" },');
+  if(S.mode!=="serverless"){
+  L.push('    { "Effect": "Allow",');
+  L.push('      "Action": ["ec2:*Vpc*","ec2:*Subnet*","ec2:*Route*","ec2:*Gateway*",');
+  L.push('                 "ec2:*SecurityGroup*","ec2:*Address*","ec2:*NetworkAcl*",');
+  L.push('                 "ec2:*VpcEndpoint*","ec2:*Tags","ec2:Describe*"],');
+  L.push('      "Resource": "*" },');
+  }
+  L.push('    { "Effect": "Allow",');
+  L.push('      "Action": ["s3:CreateBucket","s3:Get*","s3:List*","s3:Put*","s3:Delete*"],');
+  L.push('      "Resource": "*" },');
+  L.push('    { "Effect": "Allow",');
+  L.push('      "Action": ["iam:CreateRole","iam:DeleteRole","iam:GetRole","iam:UpdateRole",');
+  L.push('                 "iam:PassRole","iam:TagRole","iam:ListRolePolicies",');
+  L.push('                 "iam:PutRolePolicy","iam:GetRolePolicy","iam:DeleteRolePolicy",');
+  L.push('                 "iam:AttachRolePolicy","iam:DetachRolePolicy",');
+  L.push('                 "iam:ListAttachedRolePolicies"],');
+  L.push('      "Resource": "*" }');
+  L.push("  ]");
+  L.push("}");
+  L.push("JSON");
+  L.push('    )"');
+  L.push("done");
+  L.push("");
+  L.push("# ---------------------------------------------------------------- summary");
+  L.push('cat <<SUMMARY');
+  L.push("");
+  L.push("Done. Set these as repository VARIABLES, under Settings > Secrets and");
+  L.push("variables > Actions > Variables. None of them is a secret.");
+  L.push("");
+  L.push("  AWS_REGION            ${REGION}");
+  L.push("  AWS_PLAN_ROLE_ARN     arn:aws:iam::${ACCOUNT_ID}:role/${PLAN_ROLE}");
+  S.envs.forEach(function(en){
+    L.push("  AWS_APPLY_ROLE_ARN    arn:aws:iam::${ACCOUNT_ID}:role/gha-apply-"+S.org+"-"+S.proj+"-"+en+"   ("+en+")");
+  });
+  L.push("");
+  L.push("Also set aws_account_id = ${ACCOUNT_ID} in each envs/<env>/terraform.tfvars.");
+  L.push("");
+  L.push("Still to do, outside AWS:");
+  L.push("  - Create the Databricks service principal and its federation policy.");
+  L.push("  - Create a GitHub Environment named for each of: "+S.envs.join(", "));
+  L.push("SUMMARY");
+  return L.join("\n")+"\n";
+}
+
+function seedReadme(){
+  var r="# Seed\n\nRun once, before anything else. Not Terraform.\n\n";
+  r+="## Why this is not Terraform\n\n";
+  r+="This creates the identity GitHub Actions assumes and the bucket Terraform\nkeeps its state in. Terraform cannot create either, because it would need that\nidentity to authenticate and that bucket to store state. Terraform here would\nneed its own local state file, which someone then has to look after; a handful\nof CLI calls avoids that.\n\n";
+  r+="It is the only step a human performs, and after it nobody needs AWS\ncredentials on a laptop.\n\n";
+  r+="## Running it\n\nOpen the AWS console, select the target account and region, and click the\nCloudShell icon in the top bar. CloudShell already has the AWS CLI and your\nconsole identity.\n\n";
+  r+="```bash\nexport GITHUB_REPO=your-org/your-repo\nbash seed.sh\n```\n\n";
+  r+="Upload `seed.sh` with the CloudShell upload button, or paste it into a new\nfile. Every step checks before it creates, so re-running it is safe.\n\n";
+  r+="## What it creates\n\n- An S3 bucket for Terraform state: versioned, encrypted, public access blocked\n- The GitHub OIDC identity provider, if the account does not already have one\n- `gha-plan-*`, read-only, trusted on pull requests\n- `gha-apply-*`, one per environment, trusted only on that GitHub Environment\n\n";
+  r+="## After it finishes\n\nThe script prints the repository variables to set. They are variables, not\nsecrets: there is no long-lived credential anywhere in this setup.\n\nThen create a GitHub Environment named for each of: "+S.envs.join(", ")+".\nAdd required reviewers to the production one; that is what the\nenvironment-scoped trust is protecting.\n";
+  return r;
+}
+
+/* ---------------------------------------------------------------- render */
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function hl(src,path){
   var t=esc(src);
   if(/\.(tf|hcl)$/.test(path)||/tfvars/.test(path)){
     t=t.replace(/^(\s*#.*)$/gm,'<span class="c">$1</span>')
        .replace(/"([^"\n]*)"/g,'<span class="s">"$1"</span>')
-       .replace(/\b(resource|provider|variable|output|module|locals|data|terraform|required_providers|required_version|source|version|for_each|count)\b/g,'<span class="k">$1</span>');
+       .replace(/\b(resource|provider|variable|output|module|locals|data|terraform|required_providers|required_version|source|version|validation|count|for_each|depends_on)\b/g,'<span class="k">$1</span>');
   } else if(/\.ya?ml$/.test(path)){
     t=t.replace(/^(\s*#.*)$/gm,'<span class="c">$1</span>')
        .replace(/^(\s*-?\s*)([A-Za-z_][\w-]*)(:)/gm,'$1<span class="k">$2</span>$3');
+  } else if(/\.sh$/.test(path)){
+    t=t.replace(/^(\s*#.*)$/gm,'<span class="c">$1</span>');
   } else {
     t=t.replace(/^(#{1,6} .*)$/gm,'<span class="k">$1</span>')
        .replace(/`([^`\n]+)`/g,'<span class="s">`$1`</span>');
@@ -1628,37 +880,10 @@ function showFile(){
   document.getElementById("curpath").textContent=CUR;
   document.getElementById("code").innerHTML=hl(FILES[CUR],CUR);
 }
-/* Indicative only. Rounded list-price figures for the always-on components the
-   toggles add or remove; the point is the comparison, not the absolute number. */
-function costLines(){
-  var cls=(S.mode!=="serverless"),out=[],cur=S.cloud==="gcp"?"$":"$";
-  if(cls){
-    out.push({k:"NAT gateway",v:"~"+cur+"33/mo",note:true});
-    if(S.cloud==="aws")out.push({k:"S3 endpoint",v:"no hourly charge"});
-  }
-  if(S.pl){
-    var n=S.cloud==="aws"?3:2;
-    out.push({k:"Private endpoints",v:"~"+cur+(n*7)+"/mo ("+n+")"});
-  }
-  if(S.mode!=="classic")out.push({k:"NCC",v:"no hourly charge"});
-  if(S.log)out.push({k:"Log bucket",v:"storage only"});
-  var total=(cls?33:0)+(S.pl?(S.cloud==="aws"?21:14):0);
-  out.push({k:"Per env",v:total===0?"~"+cur+"0/mo fixed":"~"+cur+total+"/mo fixed",tot:true});
-  out.push({k:"All "+S.envs.length+" envs",v:"~"+cur+(total*S.envs.length)+"/mo fixed",tot:true});
-  return out;
-}
-function renderCost(){
-  var h="";
-  costLines().forEach(function(c){
-    h+='<div class="nrow"><span class="dot'+(c.tot?"":" warn")+'" style="'+(c.tot?"":"opacity:.45")+'"></span>'+
-       '<span class="k">'+esc(c.k)+'</span><span class="v"'+(c.tot?' style="font-weight:500"':"")+'>'+esc(c.v)+'</span></div>';
-  });
-  document.getElementById("cost").innerHTML=h;
-}
 function renderNames(){
   var h="";
   checks().forEach(function(c){
-    h+='<div class="nrow'+(c.ok?"":" is-bad")+'"><span class="dot'+(c.ok?"":(c.warn?" warn":" bad"))+'"></span>'+
+    h+='<div class="nrow'+(c.ok?"":" is-bad")+'"><span class="dot'+(c.ok?"":" bad")+'"></span>'+
        '<span class="k">'+esc(c.k)+'</span><span class="v">'+esc(c.v)+'</span></div>';
     if(!c.ok&&c.msg)h+='<div class="nmsg">'+esc(c.msg)+'</div>';
   });
@@ -1666,47 +891,40 @@ function renderNames(){
 }
 function render(){
   FILES=build();
-  var n=Object.keys(FILES).length,bytes=0;
+  var n=Object.keys(FILES).length,bytes=0,res=0;
   Object.keys(FILES).forEach(function(k){bytes+=FILES[k].length;});
+  res=(FILES["stacks/workspace/main.tf"].match(/^resource /gm)||[]).length;
   document.getElementById("nfiles").textContent=n;
   document.getElementById("nbytes").textContent=(bytes/1024).toFixed(1);
-  document.getElementById("reponame").textContent=
-    S.org+"-"+S.proj+(TAB==="platform"?"-databricks":TAB==="governance"?"-governance":"-pipelines");
-  if(TAB==="platform")document.getElementById("modehint").textContent=
-    S.mode==="classic"?"Customer-managed network. No NCC.":
-    S.mode==="serverless"?"NCC and bindings. No VPC or NAT gateway to pay for.":
-    "Both paths. Most production deployments land here.";
-  tree();showFile();
-  if(TAB==="platform"){renderNames();renderCost();}
+  document.getElementById("nres").textContent=res;
+  document.getElementById("reponame").textContent=S.org+"-"+S.proj+"-databricks";
+  document.getElementById("modehint").textContent=
+    S.mode==="classic"?"Classic workspace, customer-managed VPC. No network connectivity configuration."
+    :S.mode==="serverless"?"Serverless workspace. No VPC, no root bucket, no cross-account role."
+    :"Classic workspace plus a network connectivity configuration, so serverless compute has governed egress.";
+  tree();showFile();renderNames();
 }
 
-/* ---------- wiring ---------- */
-function seg(id,key,after,target,then){
-  var el=document.getElementById(id),obj=target||S;
+/* ---------------------------------------------------------------- wiring */
+function seg(id,key,then){
+  var el=document.getElementById(id);
   el.addEventListener("click",function(ev){
     var b=ev.target.closest("button[data-v]");if(!b)return;
     var bs=[].slice.call(el.querySelectorAll("button"));
     bs.forEach(function(x){x.setAttribute("aria-selected",String(x===b));});
     el.style.setProperty("--i",bs.indexOf(b));
-    obj[key]=b.dataset.v;if(after)after();if(then)then();render();
+    S[key]=b.dataset.v;if(then)then();render();
   });
-  if(then)then();
 }
-function sw(id,key,target){
-  var el=document.getElementById(id),obj=target||S;
+function sw(id,key){
+  var el=document.getElementById(id);
   el.addEventListener("click",function(){
     var v=el.getAttribute("aria-checked")!=="true";
-    el.setAttribute("aria-checked",String(v));obj[key]=v;render();
+    el.setAttribute("aria-checked",String(v));S[key]=v;render();
   });
 }
-function fillRegions(){
-  var sel=document.getElementById("f-region");
-  sel.innerHTML=REGIONS[S.cloud].map(function(r){return '<option>'+r+'</option>';}).join("");
-  S.region=REGIONS[S.cloud][0];
-}
-seg("seg-cloud","cloud",fillRegions);
 seg("seg-mode","mode");
-["pl","cmk","log","budget","drift"].forEach(function(k){sw("o-"+k,k);});
+sw("o-log","log");
 
 document.getElementById("f-org").addEventListener("input",function(e){
   S.org=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,"")||"acme";render();});
@@ -1718,13 +936,13 @@ document.getElementById("f-pattern").addEventListener("input",function(e){
   var unknown=(v.match(/\{[^}]*\}/g)||[]).filter(function(t){
     return ["{org}","{workload}","{env}","{res}"].indexOf(t)===-1;});
   if(unknown.length){
-    hint.textContent="Unrecognised token "+unknown[0]+" — it will be written out literally.";
+    hint.textContent="Unrecognised token "+unknown[0]+" will be written out literally.";
     hint.style.color="var(--warn)";
   } else if(v.indexOf("{res}")===-1){
-    hint.textContent="Without {res} every resource gets the same name and the apply will collide.";
+    hint.textContent="Without {res} every resource gets the same name and the apply collides.";
     hint.style.color="var(--bad)";
   } else {
-    hint.textContent="Tokens: {org} {workload} {env} {res}. Anything else is kept literally.";
+    hint.textContent="Tokens: {org} {workload} {env} {res}. Anything else is literal.";
     hint.style.color="";
   }
   S.pattern=v||"{org}-{workload}-{env}-{res}";render();
@@ -1732,8 +950,7 @@ document.getElementById("f-pattern").addEventListener("input",function(e){
 document.getElementById("envs").addEventListener("click",function(ev){
   var c=ev.target.closest(".chip");if(!c)return;
   var on=c.getAttribute("aria-pressed")==="true";
-  var list=[].slice.call(this.querySelectorAll('.chip[aria-pressed="true"]'));
-  if(on&&list.length===1)return;
+  if(on&&this.querySelectorAll('.chip[aria-pressed="true"]').length===1)return;
   c.setAttribute("aria-pressed",String(!on));
   S.envs=[].slice.call(this.querySelectorAll('.chip[aria-pressed="true"]')).map(function(x){return x.dataset.v;});
   render();
@@ -1753,29 +970,27 @@ function flash(btn,txt){
   setTimeout(function(){btn.textContent=old;btn.classList.remove("ok");},1400);
 }
 function copy(text,btn,label){
-  try{
-    navigator.clipboard.writeText(text).then(function(){flash(btn,label);},function(){fallback();});
-  }catch(e){fallback();}
   function fallback(){
     var ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);
-    ta.select();try{document.execCommand("copy");flash(btn,label);}catch(e2){btn.textContent="Select manually";}
+    ta.select();try{document.execCommand("copy");flash(btn,label);}catch(e){btn.textContent="Select manually";}
     document.body.removeChild(ta);
   }
+  try{
+    navigator.clipboard.writeText(text).then(function(){flash(btn,label);},fallback);
+  }catch(e){fallback();}
 }
-document.getElementById("copyfile").addEventListener("click",function(){
-  copy(FILES[CUR],this,"Copied");});
+document.getElementById("copyfile").addEventListener("click",function(){copy(FILES[CUR],this,"Copied");});
 document.getElementById("copyall").addEventListener("click",function(){
-  var s="#!/usr/bin/env bash\nset -euo pipefail\n\n# "+document.getElementById("reponame").textContent+" — generated by Brickworks\n\n";
+  var s="#!/usr/bin/env bash\nset -euo pipefail\n\n# "+S.org+"-"+S.proj+"-databricks — generated by Brickworks\n\n";
   Object.keys(FILES).sort().forEach(function(p){
     var dir=p.indexOf("/")>-1?p.slice(0,p.lastIndexOf("/")):"";
     if(dir)s+='mkdir -p "'+dir+'"\n';
     s+="cat > '"+p+"' <<'BRICKWORKS_EOF'\n"+FILES[p]+"BRICKWORKS_EOF\n\n";
   });
-  s+='echo "Repo written. Next: read bootstrap/README.md and run seed.sh in the cloud shell."\n';
+  s+='echo "Repository written. Next: read bootstrap/README.md."\n';
   copy(s,this,"Copied");
 });
-/* The button is always offered. Preferred route is the platform save; where the
-   page is self-hosted that is absent, so it falls back to an object URL. */
+
 var dlPromise=null;
 function downloader(){
   if(!dlPromise){
@@ -1785,42 +1000,35 @@ function downloader(){
   }
   return dlPromise;
 }
-function saveViaAnchor(blob,name){
-  var url=URL.createObjectURL(blob),a=document.createElement("a");
-  a.href=url;a.download=name;a.rel="noopener";
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  setTimeout(function(){URL.revokeObjectURL(url);},4000);
-}
 function doDownload(btn){
   var note=document.getElementById("dlnote"),label=btn.textContent;
   if(typeof JSZip==="undefined"){
-    note.textContent="The zip library didn't load. Use Copy as shell script instead.";return;}
-  var root=document.getElementById("reponame").textContent,zip=new JSZip();
+    note.textContent="The zip library did not load. Use Copy as shell script instead.";return;}
+  var root=S.org+"-"+S.proj+"-databricks",zip=new JSZip();
   Object.keys(FILES).forEach(function(p){zip.file(root+"/"+p,FILES[p]);});
   btn.disabled=true;btn.textContent="Zipping…";
   Promise.all([zip.generateAsync({type:"blob"}),downloader()]).then(function(r){
     var blob=r[0],dl=r[1];
     if(dl)return dl.save({filename:root+".zip",data:blob}).then(function(){
-      note.textContent="Saved "+root+".zip. Start with bootstrap/README.md, then stacks 00 → 10 → 20.";});
-    saveViaAnchor(blob,root+".zip");
-    note.textContent="If your browser blocked that save, use Copy as shell script — it writes every file from one paste.";
+      note.textContent="Saved "+root+".zip. Start with bootstrap/README.md.";});
+    var url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download=root+".zip";a.rel="noopener";
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(url);},4000);
+    note.textContent="If the browser blocked that save, use Copy as shell script.";
   }).catch(function(err){
     var c=err&&err.code;
     note.textContent=c==="declined"?"Download cancelled.":
       c==="rate_limited"?"A save prompt is already open. Try again in a moment.":
-      c==="too_large"?"That repo is too large to save here. Use Copy as shell script.":
-      "Couldn't save the zip here. Use Copy as shell script instead.";
-  }).then(function(){
-    btn.disabled=false;btn.textContent=label;
-  });
+      "Could not save the zip here. Use Copy as shell script instead.";
+  }).then(function(){btn.disabled=false;btn.textContent=label;});
 }
 ["download","download-top"].forEach(function(id){
   document.getElementById(id).addEventListener("click",function(){doDownload(this);});
 });
 
-/* Config sharing. Restores on load from ?c= when the page is self-hosted; inside a
-   sandboxed preview the query string is not readable, so the button still copies. */
-var CFGKEYS=["cloud","mode","org","proj","region","pattern","envs","pl","cmk","log","budget","drift"];
+/* config sharing */
+var CFGKEYS=["mode","org","proj","region","pattern","envs","log"];
 function encodeCfg(){
   var o={};CFGKEYS.forEach(function(k){o[k]=S[k];});
   try{return btoa(unescape(encodeURIComponent(JSON.stringify(o))))
@@ -1837,114 +1045,39 @@ function applyCfg(){
   }catch(e){return false;}
 }
 function syncControls(){
-  [["seg-cloud","cloud"],["seg-mode","mode"]].forEach(function(p){
-    var el=document.getElementById(p[0]),bs=[].slice.call(el.querySelectorAll("button"));
-    bs.forEach(function(b,i){
-      var on=b.dataset.v===S[p[1]];
-      b.setAttribute("aria-selected",String(on));
-      if(on)el.style.setProperty("--i",i);
-    });
+  var el=document.getElementById("seg-mode"),bs=[].slice.call(el.querySelectorAll("button"));
+  bs.forEach(function(b,i){
+    var on=b.dataset.v===S.mode;
+    b.setAttribute("aria-selected",String(on));
+    if(on)el.style.setProperty("--i",i);
   });
   document.getElementById("f-org").value=S.org;
   document.getElementById("f-proj").value=S.proj;
   document.getElementById("f-pattern").value=S.pattern;
   [].slice.call(document.querySelectorAll("#envs .chip")).forEach(function(c){
     c.setAttribute("aria-pressed",String(S.envs.indexOf(c.dataset.v)>-1));});
-  ["pl","cmk","log","budget","drift"].forEach(function(k){
-    document.getElementById("o-"+k).setAttribute("aria-checked",String(!!S[k]));});
+  document.getElementById("o-log").setAttribute("aria-checked",String(!!S.log));
 }
 document.getElementById("sharecfg").addEventListener("click",function(){
-  var base=location.origin+location.pathname;
-  copy(base+"?c="+encodeCfg(),this,"Copied");
+  copy(location.origin+location.pathname+"?c="+encodeCfg(),this,"Copied");
 });
 
+document.getElementById("f-dbx").textContent=DBX.split(".").slice(0,2).join(".");
+var sel=document.getElementById("f-region");
+sel.innerHTML=REGIONS.map(function(r){return '<option>'+r+'</option>';}).join("");
+S.region=REGIONS[1];
 var restored=applyCfg();
-
-var TABNOTE={
-  platform:"The workspace itself: networking, the Databricks workspace, Unity Catalog attachment, and GitHub Actions with OIDC. Terraform.",
-  governance:"Catalogs, schemas, volumes and grants as a bundle — plus the groups and service principals as Terraform, because bundles cannot create identity.",
-  pipelines:"Spark Declarative Pipelines bronze to gold, with their transformations and an optional scheduling job. A bundle."
-};
-function setTab(t){
-  TAB=t;CUR=null;
-  [].slice.call(document.querySelectorAll(".tabs button")).forEach(function(b){
-    b.setAttribute("aria-selected",String(b.dataset.tab===t));});
-  [].slice.call(document.querySelectorAll(".panel.pf")).forEach(function(p){p.hidden=(t!=="platform");});
-  document.getElementById("rail-shared").hidden=(t==="platform");
-  document.getElementById("rail-governance").hidden=(t!=="governance");
-  document.getElementById("rail-pipelines").hidden=(t!=="pipelines");
-  document.getElementById("tabnote").textContent=TABNOTE[t];
-  render();
-}
-document.querySelector(".tabs").addEventListener("click",function(ev){
-  var b=ev.target.closest("button[data-tab]");if(b)setTab(b.dataset.tab);
-});
-
-/* governance controls */
-seg("seg-iso","iso",null,G,function(){
-  document.getElementById("isohint").textContent = G.iso==="catalog"
-    ? "Separate catalogs per environment. Stronger isolation, more to administer."
-    : "One catalog, schemas suffixed per environment. Fewer objects, one permission boundary.";
-});
-["groups","sp","vol"].forEach(function(k){sw("g-"+k,k,G);});
-document.getElementById("g-domains").addEventListener("input",function(){
-  G.domains=listOf("g-domains",["domain"]);render();});
-document.getElementById("g-layers").addEventListener("click",function(ev){
-  var c=ev.target.closest(".chip");if(!c)return;
-  var on=c.getAttribute("aria-pressed")==="true";
-  if(on&&this.querySelectorAll('.chip[aria-pressed="true"]').length===1)return;
-  c.setAttribute("aria-pressed",String(!on));
-  G.layers=[].slice.call(this.querySelectorAll('.chip[aria-pressed="true"]')).map(function(x){return x.dataset.v;});
-  render();
-});
-
-/* pipelines controls */
-seg("seg-src","src",null,P,function(){
-  document.getElementById("srchint").textContent =
-    P.src==="files" ? "Auto Loader from a Unity Catalog volume."
-    : P.src==="kafka" ? "Kafka source; payload kept raw in bronze and parsed in silver."
-    : "Streams an existing bronze table that something else populates.";
-});
-seg("seg-trig","trig",null,P);
-["serverless","expect","job"].forEach(function(k){sw("p-"+k,k,P);});
-document.getElementById("p-names").addEventListener("input",function(){
-  P.names=listOf("p-names",["pipeline"]);render();});
-
-/* shared naming, mirrored both ways with the platform fields */
-function mirror(a,b,key){
-  document.getElementById(a).addEventListener("input",function(e){
-    var v=e.target.value.toLowerCase().replace(/[^a-z0-9]/g,"")||(key==="org"?"acme":"workload");
-    S[key]=v;document.getElementById(b).value=e.target.value;render();});
-}
-mirror("s-org","f-org","org");
-mirror("s-proj","f-proj","proj");
-document.getElementById("s-envs").addEventListener("click",function(ev){
-  var c=ev.target.closest(".chip");if(!c)return;
-  var on=c.getAttribute("aria-pressed")==="true";
-  if(on&&this.querySelectorAll('.chip[aria-pressed="true"]').length===1)return;
-  c.setAttribute("aria-pressed",String(!on));
-  S.envs=[].slice.call(this.querySelectorAll('.chip[aria-pressed="true"]')).map(function(x){return x.dataset.v;});
-  [].slice.call(document.querySelectorAll("#envs .chip")).forEach(function(x){
-    x.setAttribute("aria-pressed",String(S.envs.indexOf(x.dataset.v)>-1));});
-  render();
-});
-
-fillRegions();
 if(restored){
-  var sel=document.getElementById("f-region");
-  if(REGIONS[S.cloud].indexOf(S.region)===-1)S.region=REGIONS[S.cloud][0];
-  sel.value=S.region;
+  if(REGIONS.indexOf(S.region)===-1)S.region=REGIONS[1];
   syncControls();
 }
-document.getElementById("f-dbx").textContent=DBX.split(".").slice(0,2).join(".");
-function stampProvider(){
-  var p=PROV[S.cloud];
-  document.getElementById("f-cloudprov").innerHTML=
-    esc(p.n)+" <b>"+esc(p.v.split(".").slice(0,2).join("."))+"</b>";
-}
-var _render=render;
-render=function(){_render();stampProvider();};
+sel.value=S.region;
 render();
+
+/* expose for the generator's own test harness */
+if(typeof globalThis!=="undefined"&&globalThis.__brickworksExpose){
+  globalThis.__brickworks={S:S,build:build,fmtHcl:fmtHcl};
+}
 })();
 </script>
 </body>
